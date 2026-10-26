@@ -108,6 +108,7 @@ button.link{background:none;color:var(--bad);padding:2px 6px;font-weight:500;fon
 .seg button{flex:1;border-radius:0;background:transparent;color:var(--muted);font-weight:500;padding:8px 6px;white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
 .tablewrap{overflow-x:auto}
+.history{display:grid;gap:16px}
 table.log{width:100%;border-collapse:collapse;font-size:15px}
 .log th,.log td{text-align:start;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
 .log th{color:var(--muted);font-weight:600;font-size:14px}
@@ -186,16 +187,7 @@ legend{padding:0 6px;font-weight:600}
     <p class="hint" data-i18n="formHint"></p>
   </section>
 
-  <section class="panel">
-    <h2 data-i18n="history"></h2>
-    <div class="tablewrap">
-      <table class="log">
-        <thead><tr><th data-i18n="thDate"></th><th data-i18n="meter"></th><th data-i18n="kind"></th><th data-i18n="thValue"></th><th data-i18n="thUsed"></th><th></th></tr></thead>
-        <tbody id="log"></tbody>
-      </table>
-    </div>
-    <p class="hint" id="logEmpty" hidden data-i18n="logEmpty"></p>
-  </section>
+  <div class="history" id="log"></div>
 </div>
 
 <dialog class="sheet" id="settingsDlg" aria-labelledby="settingsTitle">
@@ -282,7 +274,7 @@ const STR = {
     when:"التاريخ والوقت", valReading:"رصيد العداد ({u})", valRecharge:"مبلغ الشحن ({u})",
     placeholder:"مثلاً 85.5", submit:"سجّل",
     formHint:"اقرا الرقم اللي على شاشة العداد كل كام يوم. كل ما القراءات تكتر، التوقع يبقى أدق.",
-    history:"السجل", thDate:"التاريخ", thValue:"القيمة", thUsed:"الاستهلاك من آخر قراءة",
+    history:"السجل", histOf:"سجل {m}", thDate:"التاريخ", thValue:"القيمة", thUsed:"الاستهلاك",
     logEmpty:"لسه مفيش تسجيلات.", tagReading:"قراءة", tagRecharge:"شحن", del:"امسح", sure:"متأكد؟",
     usedIn:"{v} {u} في {d} يوم",
     pill_ok:"تمام", pill_warn:"اشحن قريب", pill_bad:"اشحن دلوقتي", pill_none:"محتاج قراءات",
@@ -328,7 +320,7 @@ const STR = {
     when:"Date and time", valReading:"Meter balance ({u})", valRecharge:"Recharge amount ({u})",
     placeholder:"e.g. 85.5", submit:"Save entry",
     formHint:"Read the number on the meter screen every few days. The more readings, the better the forecast.",
-    history:"History", thDate:"Date", thValue:"Value", thUsed:"Used since last reading",
+    history:"History", histOf:"{m} history", thDate:"Date", thValue:"Value", thUsed:"Used",
     logEmpty:"No entries yet.", tagReading:"Reading", tagRecharge:"Recharge", del:"Delete", sure:"Sure?",
     usedIn:"{v} {u} in {d} days",
     pill_ok:"OK", pill_warn:"Recharge soon", pill_bad:"Recharge now", pill_none:"Needs readings",
@@ -524,17 +516,25 @@ function renderAlerts(list){
 function renderLog(){
   const usedById={};
   for(const k of ["elec","water"]) for(const iv of analyze(k).intervals) usedById[iv.readId]=iv;
-  const list=live(state.entries).sort((a,b)=>b.t-a.t);
-  $("#logEmpty").hidden = list.length>0;
-  $("#log").innerHTML=list.map(e=>{
-    const cfg=state.meters[e.m], u=unitLabel(cfg,e.m), iv=usedById[e.id];
-    const usedTxt = iv ? t("usedIn",{v:fmt(iv.used,2),u,d:fmt(iv.days,1)}) : "";
-    return `<tr><td class="num">${fmtDT(e.t)}</td>
-      <td><span class="tag ${e.m}">${meterName(e.m)}</span></td>
-      <td>${e.k==="reading"?t("tagReading"):`<span class="tag rech">${t("tagRecharge")}</span>`}</td>
-      <td class="num">${e.k==="recharge"?"+":""}${fmt(e.v,2)} ${u}</td>
-      <td class="num">${usedTxt}</td>
-      <td><button class="link" data-del="${e.id}" type="button">${t("del")}</button></td></tr>`;
+  const all=live(state.entries).sort((a,b)=>b.t-a.t);
+  // One history panel per meter, each with its own entries.
+  $("#log").innerHTML=["elec","water"].map(k=>{
+    const list=all.filter(e=>e.m===k), u=unitLabel(state.meters[k],k);
+    const rows=list.map(e=>{
+      const iv=usedById[e.id];
+      const usedTxt = iv ? t("usedIn",{v:fmt(iv.used,2),u,d:fmt(iv.days,1)}) : "";
+      return `<tr><td class="num">${fmtDT(e.t)}</td>
+        <td>${e.k==="reading"?t("tagReading"):`<span class="tag rech">${t("tagRecharge")}</span>`}</td>
+        <td class="num">${e.k==="recharge"?"+":""}${fmt(e.v,2)} ${u}</td>
+        <td class="num">${usedTxt}</td>
+        <td><button class="link" data-del="${e.id}" type="button">${t("del")}</button></td></tr>`;
+    }).join("");
+    return `<section class="panel">
+      <h2>${t("histOf",{m:meterName(k)})}</h2>
+      ${list.length ? `<div class="tablewrap"><table class="log">
+        <thead><tr><th>${t("thDate")}</th><th>${t("kind")}</th><th>${t("thValue")}</th><th>${t("thUsed")}</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table></div>` : `<p class="hint">${t("logEmpty")}</p>`}
+    </section>`;
   }).join("");
 }
 
