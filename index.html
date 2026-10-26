@@ -213,7 +213,7 @@ fieldset{border-radius:16px}
         </div>
       </label>
       <label for="fWhen"><span data-i18n="when"></span>
-        <input id="fWhen" type="datetime-local" required>
+        <input id="fWhen" type="date" required>
       </label>
       <label for="fVal"><span id="fValLabel"></span>
         <input id="fVal" type="number" step="0.01" min="0" inputmode="decimal" required data-i18n-ph="placeholder">
@@ -307,7 +307,7 @@ const STR = {
     elec:"الكهرباء", water:"المية", elecShort:"كهرباء", waterShort:"مية",
     egp:"جنيه", cur:"ج",
     addTitle:"سجّل قراءة أو شحن", meter:"العداد", kind:"النوع", reading:"قراءة الرصيد", recharge:"شحن",
-    when:"التاريخ والوقت", valReading:"رصيد العداد ({u})", valRecharge:"مبلغ الشحن ({u})",
+    when:"التاريخ", valReading:"رصيد العداد ({u})", valRecharge:"مبلغ الشحن ({u})",
     placeholder:"مثلاً 85.5", submit:"سجّل",
     formHint:"اقرا الرقم اللي على شاشة العداد كل كام يوم. كل ما القراءات تكتر، التوقع يبقى أدق.",
     history:"السجل", histOf:"سجل {m}", thDate:"التاريخ", thValue:"القيمة", thUsed:"الاستهلاك",
@@ -353,7 +353,7 @@ const STR = {
     elec:"Electricity", water:"Water", elecShort:"Electricity", waterShort:"Water",
     egp:"EGP", cur:"EGP",
     addTitle:"Add a reading or recharge", meter:"Meter", kind:"Type", reading:"Reading", recharge:"Recharge",
-    when:"Date and time", valReading:"Meter balance ({u})", valRecharge:"Recharge amount ({u})",
+    when:"Date", valReading:"Meter balance ({u})", valRecharge:"Recharge amount ({u})",
     placeholder:"e.g. 85.5", submit:"Save entry",
     formHint:"Read the number on the meter screen every few days. The more readings, the better the forecast.",
     history:"History", histOf:"{m} history", thDate:"Date", thValue:"Value", thUsed:"Used",
@@ -423,9 +423,14 @@ const $ = s => document.querySelector(s);
 const fmt = (n, d=1) => Number(n).toLocaleString(locale(),{maximumFractionDigits:d,minimumFractionDigits:0});
 const money = n => prefs.lang==="en" ? `${fmt(n, n < 10 ? 2 : 0)} ${t("cur")}` : `${fmt(n, n < 10 ? 2 : 0)} ${t("cur")}`;
 const fmtDate = ts => new Date(ts).toLocaleDateString(locale(),{weekday:"long",day:"numeric",month:"long"});
+const fmtD = ts => new Date(ts).toLocaleDateString(locale(),{day:"numeric",month:"short",year:"numeric"});
 const fmtDT = ts => new Date(ts).toLocaleString(locale(),{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"});
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-function localInput(ts){const d=new Date(ts);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16);}
+function localInput(ts){const d=new Date(ts);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);}
+// The form asks for a date only; the entry keeps the current time of day so same-day entries stay in order.
+function dateToTs(v){const [y,m,d]=v.split("-").map(Number), n=new Date();return new Date(y,m-1,d,n.getHours(),n.getMinutes(),n.getSeconds()).getTime();}
+let whenDefault="";
+function resetWhen(){ whenDefault=localInput(Date.now()); $("#fWhen").value=whenDefault; }
 const live = arr => arr.filter(x=>!x.del);
 function setSave(k){ saveKey=k; $("#saveState").textContent = k ? t(k) : ""; }
 
@@ -526,7 +531,7 @@ function meterCard(a){
         <div><dt>${t("rechargeBy")}</dt><dd>${rb}</dd></div>
         <div><dt>${t("rechargedMonth")}</dt><dd class="num">${money(a.rechargedThisMonth)}</dd></div>
       </dl>
-      <p class="hint">${t("rateHint",{r:fmt(a.rate,2),u,w:fmt(45,0),t:fmtDT(a.lastReading.t)})}</p>`;
+      <p class="hint">${t("rateHint",{r:fmt(a.rate,2),u,w:fmt(45,0),t:fmtD(a.lastReading.t)})}</p>`;
   }
   return `<article class="card ${a.key}">
     <div class="meter-head">
@@ -559,7 +564,7 @@ function renderLog(){
     const rows=list.map(e=>{
       const iv=usedById[e.id];
       const usedTxt = iv ? t("usedIn",{v:fmt(iv.used,2),u,d:fmt(iv.days,1)}) : "";
-      return `<tr><td class="num">${fmtDT(e.t)}</td>
+      return `<tr><td class="num">${fmtD(e.t)}</td>
         <td>${e.k==="reading"?t("tagReading"):`<span class="tag rech">${t("tagRecharge")}</span>`}</td>
         <td class="num">${e.k==="recharge"?"+":""}${fmt(e.v,2)} ${u}</td>
         <td class="num">${usedTxt}</td>
@@ -724,7 +729,7 @@ async function notifyIfDue(list){
 /* ---------- start ---------- */
 function init(){
   applyPrefs();
-  $("#fWhen").value=localInput(Date.now());
+  resetWhen();
   try{ const raw=localStorage.getItem(KEY); if(raw) state=normalize(JSON.parse(raw)); }catch(e){}
   $("#syncUrl").value=syncBase();
   if(!live(state.entries).length && !syncBase()) loadDemo();
@@ -760,11 +765,11 @@ $("#clearDemo").addEventListener("click",()=>{ leaveDemo(); render(); persist();
 
 $("#entryForm").addEventListener("submit",e=>{
   e.preventDefault();
-  const v=parseFloat($("#fVal").value), ts=new Date($("#fWhen").value).getTime();
+  const v=parseFloat($("#fVal").value), ts=$("#fWhen").value?dateToTs($("#fWhen").value):0;
   if(!(v>=0)||!ts) return;
   if(demo) leaveDemo();
   state.entries.push({id:uid(),m:sel.meter,k:sel.kind,t:ts,v,u:Date.now()});
-  $("#fVal").value=""; $("#fWhen").value=localInput(Date.now());
+  $("#fVal").value=""; resetWhen();
   render(); persist();
 });
 
@@ -793,7 +798,7 @@ $("#syncSave").addEventListener("click",()=>{
   syncNow();
 });
 $("#syncNow").addEventListener("click",syncNow);
-document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ render(); if(syncBase()) syncNow(); } });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ if($("#fWhen").value===whenDefault) resetWhen(); render(); if(syncBase()) syncNow(); } });
 
 $("#notifBtn").addEventListener("click",async()=>{
   try{ await Notification.requestPermission(); }catch(e){}
