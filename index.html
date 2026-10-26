@@ -161,7 +161,7 @@ header .save{color:inherit;opacity:.8}
 .lasts{margin:-6px 0 0;display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
 .lasts b{font-size:17px} .lasts span{color:var(--muted);font-size:14px}
 .due{display:flex;justify-content:space-between;align-items:center;gap:8px;border-radius:16px;padding:12px 16px;background:var(--ok-soft);color:var(--ok)}
-.due.warn{background:var(--warn-soft);color:var(--warn)} .due.bad{background:var(--bad-soft);color:var(--bad)}
+.due.warn{background:var(--warn-soft);color:var(--warn)} .due.none{margin:0;background:var(--bg);color:var(--muted);font-size:15px;line-height:1.6} .due.bad{background:var(--bad-soft);color:var(--bad)}
 .due span{font-weight:500;font-size:15px} .due b{font-size:17px}
 .stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .stats div{background:var(--bg);border-radius:14px;padding:10px 12px;align-content:space-between;gap:4px}
@@ -501,7 +501,8 @@ function meterCard(a){
     body=`<p class="hint">${t("cardEmpty",{m:meterName(a.key)})}</p>`;
   } else if(a.status==="none"){
     body=`<div class="big"><b class="num">${fmt(a.balance)}</b><span>${t("lastReadingU",{u})}</span></div>
-      <p class="hint">${t("needSecond")}</p>`;
+      <div class="meter-bar none" aria-hidden="true"><i style="width:0"></i></div>
+      <p class="due none">${t("needSecond")}</p>`;
   } else {
     const left = a.daysLeft===Infinity ? t("noUse") : (a.daysLeft>730 ? t("overYears") : daysText(a.daysLeft));
     const frac = a.daysLeft===Infinity ? 1 : Math.max(0,Math.min(1,a.daysLeft/30));
