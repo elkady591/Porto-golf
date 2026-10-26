@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Porto Golf</title>
+<meta name="theme-color" content="#0a7a93">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Reem+Kufi:wght@500;700&display=swap">
+<style>
+/* Layout: one column dashboard — alerts, a card per meter (electricity / water), then the log form, history and settings. */
+:root{
+  --bg:#f3f5f6; --surface:#ffffff; --fg:#17232b; --muted:#5f6f79; --line:#dde3e6;
+  --elec:#c27a00; --elec-soft:#fbf0db; --water:#0a7a93; --water-soft:#dcf1f5;
+  --ok:#2c7a4b; --ok-soft:#e1f2e7; --warn:#a85d00; --warn-soft:#fdecd2; --bad:#b3261e; --bad-soft:#fbe2df;
+  --display:"Reem Kufi","IBM Plex Sans Arabic",Tahoma,sans-serif;
+  --body:"IBM Plex Sans Arabic",Tahoma,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f171c; --surface:#172229; --fg:#e6edf0; --muted:#93a4ad; --line:#26353d;
+  --elec:#f0a830; --elec-soft:#33280f; --water:#3fc0dc; --water-soft:#0f2f37;
+  --ok:#5cc489; --ok-soft:#133022; --warn:#f0a447; --warn-soft:#3a2810; --bad:#ff7b72; --bad-soft:#3c1715; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f171c; --surface:#172229; --fg:#e6edf0; --muted:#93a4ad; --line:#26353d;
+  --elec:#f0a830; --elec-soft:#33280f; --water:#3fc0dc; --water-soft:#0f2f37;
+  --ok:#5cc489; --ok-soft:#133022; --warn:#f0a447; --warn-soft:#3a2810; --bad:#ff7b72; --bad-soft:#3c1715; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+.wrap{max-width:980px;margin:0 auto;padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:8px}
+h1{font-family:var(--display);font-weight:700;font-size:30px;margin:0;line-height:1.2}
+h2{font-family:var(--display);font-weight:500;font-size:20px;margin:0;text-wrap:balance}
+h3{font-size:16px;margin:0;font-weight:600}
+.sub{color:var(--muted);margin:0;font-size:14px}
+.num{font-variant-numeric:tabular-nums}
+.alerts{display:grid;gap:8px}
+.alert{border-radius:10px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;font-weight:500}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}
+.alert.bad{background:var(--bad-soft);color:var(--bad)}
+.alert.ok{background:var(--ok-soft);color:var(--ok)}
+.alert .dot{width:10px;height:10px;border-radius:50%;background:currentColor;margin-top:8px;flex:none}
+.meters{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;min-width:0}
+.meter-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.meter-title{display:flex;align-items:center;gap:10px}
+.glyph{width:36px;height:36px;border-radius:10px;display:grid;place-items:center}
+.elec .glyph{background:var(--elec-soft);color:var(--elec)}
+.water .glyph{background:var(--water-soft);color:var(--water)}
+.pill{font-size:13px;font-weight:600;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.none{background:var(--bg);color:var(--muted)}
+.big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.big b{font-family:var(--display);font-size:40px;font-weight:700;line-height:1}
+.elec .big b{color:var(--elec)} .water .big b{color:var(--water)}
+.big span{color:var(--muted)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin:0}
+.stats div{display:grid;gap:0}
+.stats dt{color:var(--muted);font-size:13px}
+.stats dd{margin:0;font-weight:600;font-size:16px}
+.spark{width:100%;height:70px;display:block}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;min-width:0}
+form.entry{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end}
+label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+input,select{font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:9px 16px;cursor:pointer;background:var(--fg);color:var(--bg)}
+button:disabled{opacity:.5;cursor:default}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);font-weight:500}
+button.link{background:none;color:var(--bad);padding:2px 6px;font-weight:500;font-size:13px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;border-radius:0;background:transparent;color:var(--muted);font-weight:500;padding:8px 6px}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.tablewrap{overflow-x:auto}
+table.log{width:100%;border-collapse:collapse;font-size:14px}
+.log th,.log td{text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.log th{color:var(--muted);font-weight:500;font-size:13px}
+.tag{font-size:12px;padding:2px 8px;border-radius:99px;font-weight:600}
+.tag.elec{background:var(--elec-soft);color:var(--elec)} .tag.water{background:var(--water-soft);color:var(--water)}
+.tag.rech{background:var(--ok-soft);color:var(--ok)}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+fieldset{border:1px solid var(--line);border-radius:10px;padding:12px;margin:0;display:grid;gap:10px;min-width:0}
+legend{padding:0 6px;font-weight:600}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.banner{background:var(--water-soft);color:var(--water);border-radius:10px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.save{font-size:13px;color:var(--muted)}
+details summary{cursor:pointer;font-family:var(--display);font-size:18px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filelabel{display:inline-flex;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:9px 16px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.card,.alert{transition:background .2s}}
+</style>
+</head>
+<body>
+<div class="wrap" dir="rtl">
+  <header>
+    <div>
+      <h1>Porto Golf</h1>
+      <p class="sub">الكهرباء والمية: التكلفة في اليوم والشهر، والرصيد هيخلص إمتى</p>
+    </div>
+    <span class="save" id="saveState">جاري التحميل…</span>
+  </header>
+
+  <div id="demoBanner" class="banner" hidden>
+    <span>دي بيانات مثال علشان تشوف البرنامج بيشتغل إزاي. مش محفوظة.</span>
+    <button class="ghost" id="clearDemo" type="button">ابدأ ببياناتي</button>
+  </div>
+
+  <section class="alerts" id="alerts" aria-live="polite"></section>
+
+  <section class="meters" id="meters"></section>
+
+  <section class="panel">
+    <h2>سجّل قراءة أو شحن</h2>
+    <form class="entry" id="entryForm">
+      <label>العداد
+        <div class="seg" id="segMeter">
+          <button type="button" data-v="elec" aria-pressed="true">كهرباء</button>
+          <button type="button" data-v="water" aria-pressed="false">مية</button>
+        </div>
+      </label>
+      <label>النوع
+        <div class="seg" id="segKind">
+          <button type="button" data-v="reading" aria-pressed="true">قراءة الرصيد</button>
+          <button type="button" data-v="recharge" aria-pressed="false">شحنت</button>
+        </div>
+      </label>
+      <label for="fWhen">التاريخ والوقت
+        <input id="fWhen" type="datetime-local" required>
+      </label>
+      <label for="fVal"><span id="fValLabel">الرصيد اللي ظاهر على العداد</span>
+        <input id="fVal" type="number" step="0.01" min="0" inputmode="decimal" required placeholder="مثلاً 85.5">
+      </label>
+      <button type="submit" id="fSubmit">سجّل</button>
+    </form>
+    <p class="hint">اقرا الرقم اللي على شاشة العداد كل كام يوم. كل ما القراءات تكتر، التوقع يبقى أدق.</p>
+  </section>
+
+  <section class="panel">
+    <h2>السجل</h2>
+    <div class="tablewrap">
+      <table class="log">
+        <thead><tr><th>التاريخ</th><th>العداد</th><th>النوع</th><th>القيمة</th><th>الاستهلاك من آخر قراءة</th><th></th></tr></thead>
+        <tbody id="log"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="logEmpty" hidden>لسه مفيش تسجيلات.</p>
+  </section>
+
+  <section class="panel">
+    <details id="settingsBox">
+      <summary>الإعدادات</summary>
+      <div class="settings" id="settings" style="margin-top:14px"></div>
+      <p class="hint" style="margin-top:10px">لو العداد بيعرض الرصيد بالجنيه سيب الوحدة "جنيه". لو بيعرض كيلووات أو متر مكعب اختار الوحدة واكتب سعرها علشان نحسب التكلفة.</p>
+
+      <h3 style="margin-top:18px">المزامنة مع Google Sheets</h3>
+      <p class="hint">بعد ما تعمل الشيت وسكريبت المزامنة، الصق اللينك هنا. البيانات هتتحفظ في الشيت وتظهر على أي موبايل عليه نفس اللينك.</p>
+      <div class="tools" style="margin-top:8px">
+        <input id="syncUrl" dir="ltr" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1 1 260px">
+        <button type="button" id="syncSave">اربط</button>
+        <button type="button" class="ghost" id="syncNow">زامن دلوقتي</button>
+      </div>
+      <p class="hint" id="syncState" style="margin-top:6px"></p>
+
+      <h3 style="margin-top:18px">التنبيهات على الموبايل</h3>
+      <div class="tools" style="margin-top:8px">
+        <button type="button" id="notifBtn">فعّل التنبيهات</button>
+        <span class="hint" id="notifState"></span>
+      </div>
+
+      <h3 style="margin-top:18px">نسخة احتياطية</h3>
+      <p class="hint">لو مش مستخدم المزامنة، البيانات محفوظة على الموبايل ده بس. خد نسخة كل فترة.</p>
+      <div class="tools" style="margin-top:8px">
+        <button type="button" class="ghost" id="exportBtn">نزّل نسخة احتياطية</button>
+        <label class="filelabel" for="importFile">رجّع من نسخة</label>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <span class="hint" id="backupState"></span>
+      </div>
+    </details>
+  </section>
+</div>
+
+<script>
+(function(){
+const DAY = 86400000;
+const KEY = "chalet-meters";
+const METERS = {
+  elec: {label:"الكهرباء", unitName:"ك.و.س", icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>'},
+  water:{label:"المية", unitName:"م³", icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2s-7 8-7 13a7 7 0 0 0 14 0c0-5-7-13-7-13z"/></svg>'}
+};
+/* Synced entries carry `u` = last-changed time and `del` for deletions,
+   so two phones can merge their changes: the newest version of each record wins. */
+const blank = () => ({
+  meters:{ elec:{unit:"egp", price:1.5, alertDays:5}, water:{unit:"egp", price:4, alertDays:5} },
+  settingsU:0,
+  entries:[]
+});
+
+let state = blank();
+let demo = false;
+let sel = {meter:"elec", kind:"reading"};
+
+const $ = s => document.querySelector(s);
+const fmt = (n, d=1) => Number(n).toLocaleString("ar-EG",{maximumFractionDigits:d,minimumFractionDigits:0});
+const money = n => fmt(n, n < 10 ? 2 : 0) + " ج";
+const fmtDate = t => new Date(t).toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"});
+const fmtDT = t => new Date(t).toLocaleString("ar-EG",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"});
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function localInput(t){const d=new Date(t);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16);}
+const live = arr => arr.filter(x=>!x.del);
+
+/* ---------- core calculation ---------- */
+function analyze(key){
+  const cfg = state.meters[key];
+  const es = live(state.entries).filter(e=>e.m===key).sort((a,b)=>a.t-b.t);
+  const reads = es.filter(e=>e.k==="reading");
+  const rechs = es.filter(e=>e.k==="recharge");
+  const toMoney = v => cfg.unit==="egp" ? v : v*cfg.price;
+  const now = Date.now();
+  const out = {key,cfg,reads,rechs,intervals:[],toMoney};
+
+  for(let i=1;i<reads.length;i++){
+    const a=reads[i-1], b=reads[i];
+    const added = rechs.filter(r=>r.t>a.t && r.t<=b.t).reduce((s,r)=>s+r.v,0);
+    const used = Math.max(0, a.v + added - b.v);
+    out.intervals.push({from:a.t,to:b.t,used,days:(b.t-a.t)/DAY,readId:b.id});
+  }
+
+  // Rate from the last 45 days; if those cover less than a day, use all readings.
+  let win = out.intervals.filter(iv=>iv.to>=now-45*DAY);
+  if(win.reduce((s,iv)=>s+iv.days,0) < 1) win = out.intervals;
+  const days = win.reduce((s,iv)=>s+iv.days,0);
+  out.rate = days>0.04 ? win.reduce((s,iv)=>s+iv.used,0)/days : null; // units per day
+
+  if(reads.length){
+    const last = reads[reads.length-1];
+    const after = rechs.filter(r=>r.t>last.t).reduce((s,r)=>s+r.v,0);
+    out.lastReading = last;
+    out.balance = Math.max(0, last.v + after - (out.rate||0)*Math.max(0,(now-last.t)/DAY));
+  }
+  if(out.rate!=null && out.balance!=null){
+    out.perDay = toMoney(out.rate);
+    out.perMonth = out.perDay*30;
+    if(out.rate>0){
+      out.daysLeft = out.balance/out.rate;
+      out.emptyAt = now + out.daysLeft*DAY;
+      out.rechargeBy = out.emptyAt - cfg.alertDays*DAY;
+    } else out.daysLeft = Infinity;
+  }
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+  out.rechargedThisMonth = rechs.filter(r=>r.t>=monthStart.getTime()).reduce((s,r)=>s+toMoney(r.v),0);
+  if(out.balance==null || out.rate==null) out.status="none";
+  else if(out.balance<=0 || out.daysLeft<=1) out.status="bad";
+  else if(out.daysLeft<=cfg.alertDays) out.status="warn";
+  else out.status="ok";
+  return out;
+}
+
+/* ---------- rendering ---------- */
+function unitLabel(cfg,key){return cfg.unit==="egp" ? "جنيه" : METERS[key].unitName;}
+
+function spark(a){
+  const pts=[];
+  const es = live(state.entries).filter(e=>e.m===a.key).sort((x,y)=>x.t-y.t);
+  const r0 = a.rate || 0;
+  for(const e of es){
+    if(e.k==="reading") pts.push([e.t,e.v]);
+    else if(pts.length){const prev=pts[pts.length-1];const est=Math.max(0,prev[1]-r0*(e.t-prev[0])/DAY);pts.push([e.t,est]);pts.push([e.t,est+e.v]);}
+  }
+  if(a.balance!=null) pts.push([Date.now(),a.balance]);
+  if(pts.length<2) return "";
+  const W=300,H=70,P=6;
+  const t0=pts[0][0], t1=pts[pts.length-1][0]||t0+1, vmax=Math.max(...pts.map(p=>p[1]))||1;
+  const x=t=>P+(W-2*P)*((t-t0)/Math.max(1,t1-t0));
+  const y=v=>H-P-(H-2*P)*(v/vmax);
+  const d=pts.map((p,i)=>(i?"L":"M")+x(p[0]).toFixed(1)+" "+y(p[1]).toFixed(1)).join(" ");
+  const color = a.key==="elec"?"var(--elec)":"var(--water)";
+  const soft = a.key==="elec"?"var(--elec-soft)":"var(--water-soft)";
+  const lp=pts[pts.length-1];
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="رسم الرصيد مع الوقت" style="direction:ltr">
+    <line x1="${P}" x2="${W-P}" y1="${H-P}" y2="${H-P}" stroke="var(--line)" stroke-width="1"/>
+    <path d="${d} L${x(lp[0]).toFixed(1)} ${H-P} L${P} ${H-P} Z" fill="${soft}" stroke="none"/>
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+    <circle cx="${x(lp[0]).toFixed(1)}" cy="${y(lp[1]).toFixed(1)}" r="3.5" fill="${color}"/>
+  </svg>`;
+}
+
+function meterCard(a){
+  const m=METERS[a.key], u=unitLabel(a.cfg,a.key);
+  const pillText = {ok:"تمام",warn:"اشحن قريب",bad:"اشحن دلوقتي",none:"محتاج قراءات"}[a.status];
+  let body;
+  if(a.balance==null){
+    body=`<p class="hint">سجّل الرصيد اللي ظاهر على عداد ${m.label} دلوقتي من الفورم اللي تحت.</p>`;
+  } else if(a.status==="none"){
+    body=`<div class="big"><b class="num">${fmt(a.balance)}</b><span>${u} آخر قراءة</span></div>
+      <p class="hint">محتاجين قراءة تانية بعد يوم أو أكتر علشان نعرف معدل الاستهلاك ونتوقع ميعاد الشحن.</p>`;
+  } else {
+    const left = a.daysLeft===Infinity ? "أكتر من سنتين" : (a.daysLeft<1 ? "أقل من يوم" : fmt(a.daysLeft,0)+" يوم");
+    const rb = a.rechargeBy==null ? "—" : (a.rechargeBy<=Date.now() ? "النهارده" : fmtDate(a.rechargeBy));
+    body=`<div class="big"><b class="num">${fmt(a.balance)}</b><span>${u} متبقي تقريباً</span></div>
+      ${spark(a)}
+      <dl class="stats">
+        <div><dt>التكلفة في اليوم</dt><dd class="num">${money(a.perDay)}</dd></div>
+        <div><dt>التكلفة في الشهر</dt><dd class="num">${money(a.perMonth)}</dd></div>
+        <div><dt>يكفي لمدة</dt><dd class="num">${left}</dd></div>
+        <div><dt>هيخلص يوم</dt><dd>${a.emptyAt?fmtDate(a.emptyAt):"—"}</dd></div>
+        <div><dt>اشحن قبل</dt><dd>${rb}</dd></div>
+        <div><dt>شحنت الشهر ده</dt><dd class="num">${money(a.rechargedThisMonth)}</dd></div>
+      </dl>
+      <p class="hint">المعدل ${fmt(a.rate,2)} ${u} في اليوم، محسوب من آخر 45 يوم. آخر قراءة ${fmtDT(a.lastReading.t)}.</p>`;
+  }
+  return `<article class="card ${a.key}">
+    <div class="meter-head">
+      <div class="meter-title"><span class="glyph">${m.icon}</span><h2>${m.label}</h2></div>
+      <span class="pill ${a.status}">${pillText}</span>
+    </div>${body}</article>`;
+}
+
+function renderAlerts(list){
+  const items=[];
+  for(const a of list){
+    const n=METERS[a.key].label;
+    if(a.status==="bad") items.push(`<div class="alert bad"><span class="dot"></span><span>رصيد ${n} قرب يخلص (${a.daysLeft<1?"أقل من يوم":fmt(a.daysLeft,0)+" يوم"}). اشحن النهارده.</span></div>`);
+    else if(a.status==="warn") items.push(`<div class="alert warn"><span class="dot"></span><span>${n}: فاضل حوالي ${fmt(a.daysLeft,0)} يوم، والرصيد هيخلص ${fmtDate(a.emptyAt)}. اشحن قبل كده.</span></div>`);
+  }
+  if(!items.length && list.every(a=>a.status==="ok")){
+    const rb=list.map(a=>a.rechargeBy).filter(Boolean);
+    items.push(`<div class="alert ok"><span class="dot"></span><span>الكهرباء والمية تمام.${rb.length?" أقرب ميعاد شحن: "+fmtDate(Math.min(...rb))+".":""}</span></div>`);
+  }
+  $("#alerts").innerHTML=items.join("");
+}
+
+function renderLog(){
+  const usedById={};
+  for(const k of ["elec","water"]) for(const iv of analyze(k).intervals) usedById[iv.readId]=iv;
+  const list=live(state.entries).sort((a,b)=>b.t-a.t);
+  $("#logEmpty").hidden = list.length>0;
+  $("#log").innerHTML=list.map(e=>{
+    const cfg=state.meters[e.m], u=unitLabel(cfg,e.m), iv=usedById[e.id];
+    const usedTxt = iv ? `${fmt(iv.used,2)} ${u} في ${fmt(iv.days,1)} يوم` : "";
+    return `<tr><td class="num">${fmtDT(e.t)}</td>
+      <td><span class="tag ${e.m}">${METERS[e.m].label}</span></td>
+      <td>${e.k==="reading"?"قراءة":'<span class="tag rech">شحن</span>'}</td>
+      <td class="num">${e.k==="recharge"?"+":""}${fmt(e.v,2)} ${u}</td>
+      <td class="num">${usedTxt}</td>
+      <td><button class="link" data-del="${e.id}" type="button">امسح</button></td></tr>`;
+  }).join("");
+}
+
+function renderSettings(){
+  $("#settings").innerHTML=["elec","water"].map(k=>{
+    const c=state.meters[k];
+    return `<fieldset data-k="${k}"><legend>${METERS[k].label}</legend>
+      <div class="row">
+        <label for="s-${k}-unit">العداد بيعرض
+          <select id="s-${k}-unit" data-f="unit"><option value="egp"${c.unit==="egp"?" selected":""}>جنيه</option><option value="units"${c.unit==="units"?" selected":""}>${METERS[k].unitName}</option></select>
+        </label>
+        <label for="s-${k}-price">سعر ${METERS[k].unitName} (جنيه)
+          <input id="s-${k}-price" data-f="price" type="number" step="0.01" min="0" value="${c.price}" ${c.unit==="egp"?"disabled":""}>
+        </label>
+      </div>
+      <label for="s-${k}-alert">نبّهني قبل ما يخلص بـ (يوم)
+        <input id="s-${k}-alert" data-f="alertDays" type="number" step="1" min="0" max="60" value="${c.alertDays}">
+      </label></fieldset>`;
+  }).join("");
+}
+
+function render(){
+  const list=["elec","water"].map(analyze);
+  $("#meters").innerHTML=list.map(meterCard).join("");
+  renderAlerts(list);
+  renderLog();
+  $("#demoBanner").hidden=!demo;
+  const u=unitLabel(state.meters[sel.meter],sel.meter);
+  $("#fValLabel").textContent = sel.kind==="reading" ? `الرصيد اللي ظاهر على العداد (${u})` : `المبلغ اللي شحنته (${u})`;
+  return list;
+}
+
+/* ---------- local storage ---------- */
+function persist(){
+  if(demo) return;
+  try{localStorage.setItem(KEY,JSON.stringify(state));$("#saveState").textContent="محفوظ";}catch(e){$("#saveState").textContent="مش قادر أحفظ";}
+  shareWithWorker();
+  scheduleSync();
+}
+// The service worker can't read localStorage, so hand it the predicted dates through the Cache API for background checks.
+function shareWithWorker(){
+  if(!("caches" in window) || demo) return;
+  const due=["elec","water"].map(analyze).filter(a=>a.rechargeBy).map(a=>({key:a.key,label:METERS[a.key].label,rechargeBy:a.rechargeBy,emptyAt:a.emptyAt}));
+  caches.open("chalet-state").then(c=>c.put("state.json",new Response(JSON.stringify({due,saved:Date.now()}),{headers:{"Content-Type":"application/json"}}))).catch(()=>{});
+}
+function normalize(d){
+  const b=blank();
+  if(!d||typeof d!=="object") return b;
+  for(const k of ["elec","water"]) Object.assign(b.meters[k], (d.meters||{})[k]||{});
+  b.settingsU=+d.settingsU||0;
+  b.entries=Array.isArray(d.entries)?d.entries.filter(e=>e&&e.id&&METERS[e.m]&&typeof e.t==="number"&&typeof e.v==="number").map(e=>({...e,u:+e.u||e.t})):[];
+  return b;
+}
+function loadDemo(){
+  const now=Date.now(), mk=(m,k,daysAgo,v)=>({id:uid(),m,k,t:now-daysAgo*DAY,v,u:now});
+  state=blank();
+  state.entries=[
+    mk("elec","reading",24,210), mk("elec","reading",17,168), mk("elec","reading",10,121),
+    mk("elec","recharge",9,100), mk("elec","reading",3,176), mk("elec","reading",0.2,152),
+    mk("water","reading",24,95), mk("water","reading",14,71), mk("water","reading",6,52), mk("water","reading",0.3,38)
+  ];
+  demo=true;
+}
+function leaveDemo(){ const keep=state.meters; state=blank(); state.meters=keep; demo=false; }
+
+/* ---------- Google Sheets sync (Apps Script web app) ---------- */
+let syncTimer=null, syncing=false, syncAgain=false;
+function syncBase(){ try{ return (localStorage.getItem(KEY+"-sync")||"").trim(); }catch(e){ return ""; } }
+function mergeById(a,b){
+  const map=new Map();
+  for(const r of [...a,...b]){ const cur=map.get(r.id); if(!cur || (+r.u||0)>(+cur.u||0)) map.set(r.id,r); }
+  return [...map.values()];
+}
+function scheduleSync(){ if(!syncBase()) return; clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,1500); }
+async function syncNow(){
+  const base=syncBase(); if(!base || demo) return;
+  if(syncing){ syncAgain=true; return; }
+  syncing=true; $("#syncState").textContent="جاري المزامنة…";
+  try{
+    const payload={action:"sync", entries:state.entries,
+      kv:[{id:"settings",u:state.settingsU,data:{meters:state.meters}}]};
+    // text/plain keeps this a "simple" request, which Apps Script accepts without a CORS preflight.
+    const r=await fetch(base,{method:"POST",body:JSON.stringify(payload),headers:{"Content-Type":"text/plain;charset=utf-8"},redirect:"follow"});
+    const j=await r.json();
+    if(!j||!j.ok) throw new Error(j&&j.error||"bad reply");
+    state.entries=mergeById(state.entries, normalize({entries:j.entries}).entries);
+    for(const kv of j.kv||[]){
+      if(kv.id==="settings" && +kv.u>state.settingsU){ const n=normalize(kv.data); state.meters=n.meters; state.settingsU=+kv.u; renderSettings(); }
+    }
+    try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}
+    $("#syncState").textContent="آخر مزامنة: "+fmtDT(Date.now());
+    $("#saveState").textContent="محفوظ ومتزامن";
+    shareWithWorker();
+    notifyIfDue(render());
+  }catch(e){
+    $("#syncState").textContent="المزامنة ما نجحتش. اتأكد من النت ومن لينك السكريبت. البيانات محفوظة على الموبايل وهتتزامن بعدين.";
+  }finally{
+    syncing=false;
+    if(syncAgain){ syncAgain=false; scheduleSync(); }
+  }
+}
+
+/* ---------- notifications ---------- */
+async function swReg(){ try{ return "serviceWorker" in navigator ? await navigator.serviceWorker.ready : null; }catch(e){ return null; } }
+function notifRefresh(){
+  const s=$("#notifState"), b=$("#notifBtn");
+  if(!("Notification" in window)){ s.textContent="المتصفح ده مش بيدعم التنبيهات"; b.hidden=true; return; }
+  if(Notification.permission==="granted"){ s.textContent="التنبيهات شغالة. هتجيلك لما تفتح البرنامج، وكمان في الخلفية لو الموبايل بيدعم ده."; b.hidden=true; }
+  else if(Notification.permission==="denied"){ s.textContent="التنبيهات مقفولة للموقع ده. افتحها من إعدادات المتصفح."; b.hidden=true; }
+  else { s.textContent="فعّلها علشان يجيلك تنبيه قبل ما الرصيد يخلص."; b.hidden=false; }
+}
+async function registerPeriodic(){
+  const reg=await swReg();
+  if(!reg || !("periodicSync" in reg)) return;
+  try{
+    const st=await navigator.permissions.query({name:"periodic-background-sync"});
+    if(st.state==="granted") await reg.periodicSync.register("chalet-check",{minInterval:12*60*60*1000});
+  }catch(e){}
+}
+async function notifyIfDue(list){
+  if(demo || !("Notification" in window) || Notification.permission!=="granted") return;
+  const today=new Date().toDateString();
+  let last={}; try{ last=JSON.parse(localStorage.getItem(KEY+"-notified")||"{}"); }catch(e){}
+  const reg=await swReg();
+  for(const a of list){
+    if(a.status!=="warn" && a.status!=="bad") continue;
+    if(last[a.key]===today) continue;
+    const n=METERS[a.key].label;
+    const body = a.status==="bad" ? `رصيد ${n} قرب يخلص. اشحن النهارده.` : `فاضل حوالي ${fmt(a.daysLeft,0)} يوم في رصيد ${n}. اشحن قبل ${fmtDate(a.emptyAt)}.`;
+    try{
+      if(reg) await reg.showNotification("Porto Golf",{body,icon:"icon-192.png",badge:"icon-192.png",tag:"chalet-"+a.key,lang:"ar",dir:"rtl"});
+      else new Notification("Porto Golf",{body,icon:"icon-192.png"});
+      last[a.key]=today;
+    }catch(e){}
+  }
+  try{ localStorage.setItem(KEY+"-notified",JSON.stringify(last)); }catch(e){}
+}
+
+/* ---------- start ---------- */
+function init(){
+  $("#fWhen").value=localInput(Date.now());
+  try{ const raw=localStorage.getItem(KEY); if(raw) state=normalize(JSON.parse(raw)); }catch(e){}
+  $("#syncUrl").value=syncBase();
+  if(!live(state.entries).length && !syncBase()) loadDemo();
+  $("#saveState").textContent = demo ? "" : "محفوظ";
+  renderSettings();
+  const list=render();
+  notifRefresh();
+  shareWithWorker();
+  notifyIfDue(list);
+  if(syncBase()) syncNow();
+}
+
+/* ---------- events ---------- */
+function bindSeg(id,key){
+  $(id).addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    sel[key]=b.dataset.v;
+    $(id).querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+    render();
+  });
+}
+bindSeg("#segMeter","meter"); bindSeg("#segKind","kind");
+
+$("#clearDemo").addEventListener("click",()=>{ leaveDemo(); render(); persist(); });
+
+$("#entryForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const v=parseFloat($("#fVal").value), t=new Date($("#fWhen").value).getTime();
+  if(!(v>=0)||!t) return;
+  if(demo) leaveDemo();
+  state.entries.push({id:uid(),m:sel.meter,k:sel.kind,t,v,u:Date.now()});
+  $("#fVal").value=""; $("#fWhen").value=localInput(Date.now());
+  render(); persist();
+});
+
+$("#log").addEventListener("click",e=>{
+  const b=e.target.closest("[data-del]"); if(!b) return;
+  if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="متأكد؟"; setTimeout(()=>{ if(b.isConnected){b.dataset.confirm="";b.textContent="امسح";} },3000); return; }
+  if(demo){ state.entries=state.entries.filter(x=>x.id!==b.dataset.del); render(); return; }
+  const rec=state.entries.find(x=>x.id===b.dataset.del);
+  if(rec){ rec.del=1; rec.u=Date.now(); }
+  render(); persist();
+});
+
+$("#settings").addEventListener("change",e=>{
+  const f=e.target.dataset.f, k=e.target.closest("fieldset").dataset.k; if(!f) return;
+  const c=state.meters[k];
+  if(f==="unit") c.unit=e.target.value;
+  else { const n=parseFloat(e.target.value); if(n>=0) c[f]=n; }
+  state.settingsU=Date.now();
+  renderSettings(); render(); persist();
+});
+
+$("#syncSave").addEventListener("click",()=>{
+  const v=$("#syncUrl").value.trim();
+  if(v && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(v)){ $("#syncState").textContent="اللينك لازم يكون لينك الـ Web app من Apps Script وبيخلص بـ /exec"; return; }
+  try{ localStorage.setItem(KEY+"-sync",v); }catch(e){}
+  if(!v){ $("#syncState").textContent="المزامنة متوقفة."; return; }
+  if(demo){ leaveDemo(); render(); }
+  syncNow();
+});
+$("#syncNow").addEventListener("click",syncNow);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ render(); if(syncBase()) syncNow(); } });
+
+$("#notifBtn").addEventListener("click",async()=>{
+  try{ await Notification.requestPermission(); }catch(e){}
+  notifRefresh();
+  if(Notification.permission==="granted"){ await registerPeriodic(); notifyIfDue(["elec","water"].map(analyze)); }
+});
+
+$("#exportBtn").addEventListener("click",()=>{
+  if(demo){ $("#backupState").textContent="مفيش بيانات ليك لسه."; return; }
+  const blob=new Blob([JSON.stringify(state,null,1)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="porto-golf-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  $("#backupState").textContent="اتنزلت النسخة.";
+});
+$("#importFile").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  f.text().then(t=>{
+    const d=normalize(JSON.parse(t));
+    if(!d.entries.length) throw new Error("empty");
+    state=d; demo=false; renderSettings(); render(); persist();
+    $("#backupState").textContent=`رجّعت ${fmt(d.entries.length,0)} تسجيل.`;
+  }).catch(()=>{ $("#backupState").textContent="الملف ده مش نسخة احتياطية من البرنامج."; });
+  e.target.value="";
+});
+
+init();
+setInterval(render, 10*60*1000); // keep "remaining balance" estimates current while the page stays open
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load",()=>{ navigator.serviceWorker.register("./sw.js").then(()=>{ if("Notification" in window && Notification.permission==="granted") registerPeriodic(); }).catch(()=>{}); });
+}
+})();
+</script>
+</body>
+</html>
