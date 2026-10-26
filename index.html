@@ -91,7 +91,6 @@ h3{font-size:17px;margin:0;font-weight:700}
 .stats div{display:grid;gap:0}
 .stats dt{color:var(--muted);font-size:14px;font-weight:500}
 .stats dd{margin:0;font-weight:700;font-size:17px}
-.spark{width:100%;height:70px;display:block}
 .hint{color:var(--muted);font-size:14px;margin:0}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;min-width:0}
 form.entry{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:start}
@@ -155,11 +154,19 @@ header .save{color:inherit;opacity:.8}
 .pill{padding:5px 12px;font-size:13px}
 .big b{font-size:54px;letter-spacing:-.02em}
 .big span{font-size:15px}
-.spark{height:84px}
-.stats{gap:8px}
-.stats div{background:var(--bg);border-radius:14px;padding:10px 12px}
-.stats dt{font-size:13px}
-.stats dd{font-size:16px}
+.big{margin-bottom:-4px}
+.meter-bar{height:8px;border-radius:99px;background:var(--bg);overflow:hidden}
+.meter-bar i{display:block;height:100%;border-radius:inherit;background:var(--ok)}
+.meter-bar.warn i{background:var(--warn)} .meter-bar.bad i{background:var(--bad)}
+.lasts{margin:-6px 0 0;display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.lasts b{font-size:17px} .lasts span{color:var(--muted);font-size:14px}
+.due{display:flex;justify-content:space-between;align-items:center;gap:8px;border-radius:16px;padding:12px 16px;background:var(--ok-soft);color:var(--ok)}
+.due.warn{background:var(--warn-soft);color:var(--warn)} .due.bad{background:var(--bad-soft);color:var(--bad)}
+.due span{font-weight:500;font-size:15px} .due b{font-size:17px}
+.stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stats div{background:var(--bg);border-radius:14px;padding:10px 12px;align-content:space-between;gap:4px}
+.stats dt{font-size:13px;line-height:1.35}
+.stats dd{font-size:16px;white-space:nowrap}
 input,select{border:0;border-radius:14px;padding:12px 14px;background:var(--bg)}
 .seg{border:0;background:var(--bg);border-radius:99px;padding:4px;gap:4px}
 .seg button{border-radius:99px;padding:8px 10px}
@@ -320,8 +327,8 @@ const STR = {
     lastReadingU:"{u} آخر قراءة",
     needSecond:"محتاجين قراءة تانية بعد يوم أو أكتر علشان نعرف معدل الاستهلاك ونتوقع ميعاد الشحن.",
     remaining:"{u} متبقي تقريباً",
-    perDay:"التكلفة في اليوم", perMonth:"التكلفة في الشهر", lasts:"يكفي لمدة", emptyOn:"هيخلص يوم",
-    rechargeBy:"اشحن قبل", rechargedMonth:"شحنت الشهر ده",
+    perDay:"في اليوم", perMonth:"في الشهر", lasts:"يكفي لمدة", emptyOn:"هيخلص يوم",
+    rechargeBy:"اشحن قبل", rechargedMonth:"شحن الشهر",
     nDays:"{n} يوم", lessDay:"أقل من يوم", overYears:"أكتر من سنتين", noUse:"مفيش استهلاك", today:"النهارده",
     rateHint:"المعدل {r} {u} في اليوم، محسوب من آخر {w} يوم. آخر قراءة {t}.",
     alertBad:"رصيد {m} قرب يخلص ({d}). اشحن النهارده.",
@@ -366,7 +373,7 @@ const STR = {
     lastReadingU:"{u}, last reading",
     needSecond:"Add another reading after a day or more so the app can work out your usage and forecast the recharge date.",
     remaining:"{u} left (approx.)",
-    perDay:"Cost per day", perMonth:"Cost per month", lasts:"Lasts", emptyOn:"Runs out on",
+    perDay:"Per day", perMonth:"Per month", lasts:"Lasts", emptyOn:"Runs out on",
     rechargeBy:"Recharge by", rechargedMonth:"Recharged this month",
     nDays:"{n} days", lessDay:"Less than a day", overYears:"Over 2 years", noUse:"No usage", today:"Today",
     rateHint:"Rate {r} {u}/day, from the last {w} days. Last reading {t}.",
@@ -425,6 +432,7 @@ const $ = s => document.querySelector(s);
 const fmt = (n, d=1) => Number(n).toLocaleString(locale(),{maximumFractionDigits:d,minimumFractionDigits:0});
 const money = n => prefs.lang==="en" ? `${fmt(n, n < 10 ? 2 : 0)} ${t("cur")}` : `${fmt(n, n < 10 ? 2 : 0)} ${t("cur")}`;
 const fmtDate = ts => new Date(ts).toLocaleDateString(locale(),{weekday:"long",day:"numeric",month:"long"});
+const fmtDateS = ts => new Date(ts).toLocaleDateString(locale(),{weekday:"short",day:"numeric",month:"short"});
 const fmtD = ts => new Date(ts).toLocaleDateString(locale(),{day:"numeric",month:"short",year:"numeric"});
 const fmtDT = ts => new Date(ts).toLocaleString(locale(),{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"});
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -486,32 +494,6 @@ function analyze(key){
 function unitLabel(){return t("egp");}
 function daysText(d){ return d===Infinity ? t("noUse") : d<1 ? t("lessDay") : t("nDays",{n:fmt(d,0)}); }
 
-function spark(a){
-  const pts=[];
-  const es = live(state.entries).filter(e=>e.m===a.key).sort((x,y)=>x.t-y.t);
-  const r0 = a.rate || 0;
-  for(const e of es){
-    if(e.k==="reading") pts.push([e.t,e.v]);
-    else if(pts.length){const prev=pts[pts.length-1];const est=Math.max(0,prev[1]-r0*(e.t-prev[0])/DAY);pts.push([e.t,est]);pts.push([e.t,est+e.v]);}
-  }
-  if(a.balance!=null) pts.push([Date.now(),a.balance]);
-  if(pts.length<2) return "";
-  const W=300,H=70,P=6;
-  const t0=pts[0][0], t1=pts[pts.length-1][0]||t0+1, vmax=Math.max(...pts.map(p=>p[1]))||1;
-  const x=ts=>P+(W-2*P)*((ts-t0)/Math.max(1,t1-t0));
-  const y=v=>H-P-(H-2*P)*(v/vmax);
-  const d=pts.map((p,i)=>(i?"L":"M")+x(p[0]).toFixed(1)+" "+y(p[1]).toFixed(1)).join(" ");
-  const color = a.key==="elec"?"var(--elec)":"var(--water)";
-  const soft = a.key==="elec"?"var(--elec-soft)":"var(--water-soft)";
-  const lp=pts[pts.length-1];
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-hidden="true" style="direction:ltr">
-    <line x1="${P}" x2="${W-P}" y1="${H-P}" y2="${H-P}" stroke="var(--line)" stroke-width="1"/>
-    <path d="${d} L${x(lp[0]).toFixed(1)} ${H-P} L${P} ${H-P} Z" fill="${soft}" stroke="none"/>
-    <path d="${d}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
-    <circle cx="${x(lp[0]).toFixed(1)}" cy="${y(lp[1]).toFixed(1)}" r="3.5" fill="${color}"/>
-  </svg>`;
-}
-
 function meterCard(a){
   const m=METERS[a.key], u=unitLabel(a.cfg,a.key);
   let body;
@@ -522,15 +504,14 @@ function meterCard(a){
       <p class="hint">${t("needSecond")}</p>`;
   } else {
     const left = a.daysLeft===Infinity ? t("noUse") : (a.daysLeft>730 ? t("overYears") : daysText(a.daysLeft));
-    const rb = a.rechargeBy==null ? "—" : (a.rechargeBy<=Date.now() ? t("today") : fmtDate(a.rechargeBy));
+    const frac = a.daysLeft===Infinity ? 1 : Math.max(0,Math.min(1,a.daysLeft/30));
     body=`<div class="big"><b class="num">${fmt(a.balance)}</b><span>${t("remaining",{u})}</span></div>
-      ${spark(a)}
+      <div class="meter-bar ${a.status}" aria-hidden="true"><i style="width:${(frac*100).toFixed(1)}%"></i></div>
+      <p class="lasts"><b class="num">${left}</b><span>${a.emptyAt?t("emptyOn")+" "+fmtDateS(a.emptyAt):""}</span></p>
+      <div class="due ${a.status}"><span>${t("rechargeBy")}</span><b>${a.rechargeBy==null?"—":(a.rechargeBy<=Date.now()?t("today"):fmtDateS(a.rechargeBy))}</b></div>
       <dl class="stats">
         <div><dt>${t("perDay")}</dt><dd class="num">${money(a.perDay)}</dd></div>
         <div><dt>${t("perMonth")}</dt><dd class="num">${money(a.perMonth)}</dd></div>
-        <div><dt>${t("lasts")}</dt><dd class="num">${left}</dd></div>
-        <div><dt>${t("emptyOn")}</dt><dd>${a.emptyAt?fmtDate(a.emptyAt):"—"}</dd></div>
-        <div><dt>${t("rechargeBy")}</dt><dd>${rb}</dd></div>
         <div><dt>${t("rechargedMonth")}</dt><dd class="num">${money(a.rechargedThisMonth)}</dd></div>
       </dl>
       <p class="hint">${t("rateHint",{r:fmt(a.rate,2),u,w:fmt(45,0),t:fmtD(a.lastReading.t)})}</p>`;
