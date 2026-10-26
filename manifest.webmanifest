@@ -1,11 +1,11 @@
 {
-  "id": "./?app=porto-golf-v2",
+  "id": "/Porto-golf/",
   "name": "Porto Golf",
   "short_name": "Porto Golf",
   "description": "حساب تكلفة الكهرباء والمية وميعاد الشحن",
   "lang": "ar",
   "dir": "rtl",
-  "start_url": "./?source=app",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f3f5f6",
