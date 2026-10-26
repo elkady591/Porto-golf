@@ -96,7 +96,7 @@ h3{font-size:17px;margin:0;font-weight:700}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;min-width:0}
 form.entry{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:start}
 form.entry label>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-form.entry>button[type=submit]{grid-column:1/-1}
+form.entry>button[type=submit],form.entry>#fCancel{grid-column:1/-1}
 label{display:grid;gap:4px;font-size:14px;font-weight:500;color:var(--muted)}
 input,select{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
 input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -104,6 +104,7 @@ button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:9px 16px;
 button:disabled{opacity:.5;cursor:default}
 button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);font-weight:500}
 button.link{background:none;color:var(--bad);padding:2px 6px;font-weight:500;font-size:13px}
+button.link.edit{color:var(--accent)}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{flex:1;border-radius:0;background:transparent;color:var(--muted);font-weight:500;padding:8px 6px;white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
@@ -219,6 +220,7 @@ fieldset{border-radius:16px}
         <input id="fVal" type="number" step="0.01" min="0" inputmode="decimal" required data-i18n-ph="placeholder">
       </label>
       <button type="submit" id="fSubmit" data-i18n="submit"></button>
+      <button type="button" class="ghost" id="fCancel" data-i18n="cancelEdit" hidden></button>
     </form>
     <p class="hint" data-i18n="formHint"></p>
   </section>
@@ -311,7 +313,7 @@ const STR = {
     placeholder:"مثلاً 85.5", submit:"سجّل",
     formHint:"اقرا الرقم اللي على شاشة العداد كل كام يوم. كل ما القراءات تكتر، التوقع يبقى أدق.",
     history:"السجل", histOf:"سجل {m}", thDate:"التاريخ", thValue:"القيمة", thUsed:"الاستهلاك",
-    logEmpty:"لسه مفيش تسجيلات.", tagReading:"قراءة", tagRecharge:"شحن", del:"امسح", sure:"متأكد؟",
+    logEmpty:"لسه مفيش تسجيلات.", tagReading:"قراءة", tagRecharge:"شحن", del:"امسح", sure:"متأكد؟", edit:"عدّل", saveEdit:"احفظ التعديل", cancelEdit:"إلغاء",
     usedIn:"{v} {u} في {d} يوم",
     pill_ok:"تمام", pill_warn:"اشحن قريب", pill_bad:"اشحن دلوقتي", pill_none:"محتاج قراءات",
     cardEmpty:"سجّل الرصيد اللي ظاهر على عداد {m} دلوقتي من الفورم اللي تحت.",
@@ -357,7 +359,7 @@ const STR = {
     placeholder:"e.g. 85.5", submit:"Save entry",
     formHint:"Read the number on the meter screen every few days. The more readings, the better the forecast.",
     history:"History", histOf:"{m} history", thDate:"Date", thValue:"Value", thUsed:"Used",
-    logEmpty:"No entries yet.", tagReading:"Reading", tagRecharge:"Recharge", del:"Delete", sure:"Sure?",
+    logEmpty:"No entries yet.", tagReading:"Reading", tagRecharge:"Recharge", del:"Delete", sure:"Sure?", edit:"Edit", saveEdit:"Save changes", cancelEdit:"Cancel",
     usedIn:"{v} {u} in {d} days",
     pill_ok:"OK", pill_warn:"Recharge soon", pill_bad:"Recharge now", pill_none:"Needs readings",
     cardEmpty:"Enter the balance shown on the {m} meter now, using the form below.",
@@ -568,7 +570,7 @@ function renderLog(){
         <td>${e.k==="reading"?t("tagReading"):`<span class="tag rech">${t("tagRecharge")}</span>`}</td>
         <td class="num">${e.k==="recharge"?"+":""}${fmt(e.v,2)} ${u}</td>
         <td class="num">${usedTxt}</td>
-        <td><button class="link" data-del="${e.id}" type="button">${t("del")}</button></td></tr>`;
+        <td><button class="link edit" data-edit="${e.id}" type="button">${t("edit")}</button><button class="link" data-del="${e.id}" type="button">${t("del")}</button></td></tr>`;
     }).join("");
     return `<section class="panel">
       <h2>${t("histOf",{m:meterName(k)})}</h2>
@@ -767,18 +769,48 @@ $("#entryForm").addEventListener("submit",e=>{
   e.preventDefault();
   const v=parseFloat($("#fVal").value), ts=$("#fWhen").value?dateToTs($("#fWhen").value):0;
   if(!(v>=0)||!ts) return;
+  const rec=editing && state.entries.find(x=>x.id===editing);
+  if(rec){
+    // Keep the original time of day when the date wasn't changed.
+    Object.assign(rec,{m:sel.meter,k:sel.kind,v,u:Date.now()});
+    if($("#fWhen").value!==localInput(rec.t)) rec.t=ts;
+    endEdit();
+    render(); if(!demo) persist();
+    return;
+  }
   if(demo) leaveDemo();
   state.entries.push({id:uid(),m:sel.meter,k:sel.kind,t:ts,v,u:Date.now()});
   $("#fVal").value=""; resetWhen();
   render(); persist();
 });
 
+/* ---------- editing an entry: the form is reused, with "Save changes" and "Cancel" ---------- */
+let editing=null;
+function setSubmitText(k){ const b=$("#fSubmit"); b.dataset.i18n=k; b.textContent=t(k); }
+function startEdit(id){
+  const rec=state.entries.find(x=>x.id===id); if(!rec) return;
+  editing=id; sel.meter=rec.m; sel.kind=rec.k;
+  pressOnly("#segMeter",$(`#segMeter [data-v="${rec.m}"]`));
+  pressOnly("#segKind",$(`#segKind [data-v="${rec.k}"]`));
+  $("#fWhen").value=localInput(rec.t); $("#fVal").value=rec.v;
+  setSubmitText("saveEdit"); $("#fCancel").hidden=false;
+  render();
+  $("#entryForm").scrollIntoView({behavior:"smooth",block:"center"});
+}
+function endEdit(){
+  editing=null; setSubmitText("submit"); $("#fCancel").hidden=true;
+  $("#fVal").value=""; resetWhen();
+}
+$("#fCancel").addEventListener("click",()=>{ endEdit(); render(); });
+
 $("#log").addEventListener("click",e=>{
+  const ed=e.target.closest("[data-edit]"); if(ed){ startEdit(ed.dataset.edit); return; }
   const b=e.target.closest("[data-del]"); if(!b) return;
   if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent=t("sure"); setTimeout(()=>{ if(b.isConnected){b.dataset.confirm="";b.textContent=t("del");} },3000); return; }
   if(demo){ state.entries=state.entries.filter(x=>x.id!==b.dataset.del); render(); return; }
   const rec=state.entries.find(x=>x.id===b.dataset.del);
   if(rec){ rec.del=1; rec.u=Date.now(); }
+  if(editing===b.dataset.del) endEdit();
   render(); persist();
 });
 
