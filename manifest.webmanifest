@@ -1,11 +1,11 @@
 {
-  "id": "/Porto-golf/",
+  "id": "porto-golf-2026",
   "name": "Porto Golf",
   "short_name": "Porto Golf",
   "description": "حساب تكلفة الكهرباء والمية وميعاد الشحن",
   "lang": "ar",
   "dir": "rtl",
-  "start_url": "./",
+  "start_url": "./?app=2",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f3f5f6",
