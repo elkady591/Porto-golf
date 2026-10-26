@@ -1,5 +1,5 @@
 // Offline shell + background reminder check for Porto Golf.
-const SHELL = "chalet-shell-v4";
+const SHELL = "chalet-shell-v5";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -39,14 +39,17 @@ async function checkDue() {
   const c = await caches.open("chalet-state");
   const r = await c.match("state.json");
   if (!r) return;
-  const { due = [] } = await r.json();
+  const { due = [], lang = "ar", dir = "rtl", text = {} } = await r.json();
+  const bad = text.bad || "رصيد {m} قرب يخلص. اشحن النهارده.";
+  const soon = text.soon || "فاضل حوالي {n} يوم في رصيد {m}. اشحن قريب.";
+  const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
   const now = Date.now();
   for (const m of due) {
     if (now < m.rechargeBy) continue;
     const days = Math.max(0, Math.round((m.emptyAt - now) / 86400000));
-    const body = days <= 1 ? `رصيد ${m.label} قرب يخلص. اشحن النهارده.` : `فاضل حوالي ${days} يوم في رصيد ${m.label}. اشحن قريب.`;
+    const body = days <= 1 ? fill(bad, { m: m.label }) : fill(soon, { m: m.label, n: days });
     await self.registration.showNotification("Porto Golf", {
-      body, icon: "icon-192.png", badge: "icon-192.png", tag: "chalet-" + m.key, lang: "ar", dir: "rtl"
+      body, icon: "icon-192.png", badge: "icon-192.png", tag: "chalet-" + m.key, lang, dir
     });
   }
 }
