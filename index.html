@@ -135,6 +135,42 @@ fieldset{border:1px solid var(--line);border-radius:10px;padding:12px;margin:0;d
 legend{padding:0 6px;font-weight:600}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (prefers-reduced-motion:no-preference){.card,.alert,body{transition:background .2s}}
+/* Resort look: a soft hero header, shadowed cards with no borders, large numbers, stats as small tiles. */
+:root{--hero-bg:linear-gradient(155deg,var(--accent),color-mix(in srgb,var(--accent) 62%,#001018));--hero-fg:#fff;--shadow:0 1px 2px rgba(16,40,48,.05),0 10px 30px rgba(16,40,48,.08);--bg:#eef3f4}
+:root[data-palette="golf"]{--bg:#eef3ea} :root[data-palette="sand"]{--bg:#f4eee5} :root[data-palette="graphite"]{--bg:#efeff1}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--hero-bg:linear-gradient(155deg,color-mix(in srgb,var(--accent) 30%,var(--surface)),var(--surface));--hero-fg:var(--fg);--shadow:0 0 0 1px var(--line)}}
+:root[data-theme="dark"]{--hero-bg:linear-gradient(155deg,color-mix(in srgb,var(--accent) 30%,var(--surface)),var(--surface));--hero-fg:var(--fg);--shadow:0 0 0 1px var(--line)}
+
+.wrap{gap:18px;padding-top:16px}
+header{background:var(--hero-bg);color:var(--hero-fg);border-radius:28px;padding:22px 22px 26px;align-items:center}
+header h1{font-size:28px}
+header .sub{color:inherit;opacity:.85;font-size:14px;max-width:32ch}
+header .save{color:inherit;opacity:.8}
+.gear{background:rgba(255,255,255,.16);color:inherit;border:0;border-radius:50%;width:46px;height:46px}
+.alert{border-radius:18px;padding:14px 16px}
+.card,.panel{border:0;border-radius:24px;padding:20px;box-shadow:var(--shadow);gap:16px}
+.glyph{width:46px;height:46px;border-radius:50%}
+.meter-title h2{font-size:21px}
+.pill{padding:5px 12px;font-size:13px}
+.big b{font-size:54px;letter-spacing:-.02em}
+.big span{font-size:15px}
+.spark{height:84px}
+.stats{gap:8px}
+.stats div{background:var(--bg);border-radius:14px;padding:10px 12px}
+.stats dt{font-size:13px}
+.stats dd{font-size:16px}
+input,select{border:0;border-radius:14px;padding:12px 14px;background:var(--bg)}
+.seg{border:0;background:var(--bg);border-radius:99px;padding:4px;gap:4px}
+.seg button{border-radius:99px;padding:8px 10px}
+form.entry>button[type=submit],button{border-radius:14px}
+form.entry>button[type=submit]{padding:14px;font-size:17px}
+button.ghost,.filelabel{border-radius:14px}
+.log th,.log td{padding:12px 6px}
+.log tr:last-child td{border-bottom:0}
+.banner{border-radius:18px;padding:12px 16px}
+dialog.sheet{border-radius:26px}
+.swatch{border-radius:16px}
+fieldset{border-radius:16px}
 </style>
 </head>
 <body>
