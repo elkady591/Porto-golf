@@ -94,7 +94,9 @@ h3{font-size:17px;margin:0;font-weight:700}
 .spark{width:100%;height:70px;display:block}
 .hint{color:var(--muted);font-size:14px;margin:0}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;min-width:0}
-form.entry{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end}
+form.entry{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:start}
+form.entry label>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+form.entry>button[type=submit]{grid-column:1/-1}
 label{display:grid;gap:4px;font-size:14px;font-weight:500;color:var(--muted)}
 input,select{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
 input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -103,7 +105,7 @@ button:disabled{opacity:.5;cursor:default}
 button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);font-weight:500}
 button.link{background:none;color:var(--bad);padding:2px 6px;font-weight:500;font-size:13px}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.seg button{flex:1;border-radius:0;background:transparent;color:var(--muted);font-weight:500;padding:8px 6px}
+.seg button{flex:1;border-radius:0;background:transparent;color:var(--muted);font-weight:500;padding:8px 6px;white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
 .tablewrap{overflow-x:auto}
 table.log{width:100%;border-collapse:collapse;font-size:15px}
@@ -276,8 +278,8 @@ const STR = {
     demo:"دي بيانات مثال علشان تشوف البرنامج بيشتغل إزاي. مش محفوظة.", startMine:"ابدأ ببياناتي",
     elec:"الكهرباء", water:"المية", elecShort:"كهرباء", waterShort:"مية",
     egp:"جنيه", cur:"ج",
-    addTitle:"سجّل قراءة أو شحن", meter:"العداد", kind:"النوع", reading:"قراءة الرصيد", recharge:"شحنت",
-    when:"التاريخ والوقت", valReading:"الرصيد اللي ظاهر على العداد ({u})", valRecharge:"المبلغ اللي شحنته ({u})",
+    addTitle:"سجّل قراءة أو شحن", meter:"العداد", kind:"النوع", reading:"قراءة الرصيد", recharge:"شحن",
+    when:"التاريخ والوقت", valReading:"رصيد العداد ({u})", valRecharge:"مبلغ الشحن ({u})",
     placeholder:"مثلاً 85.5", submit:"سجّل",
     formHint:"اقرا الرقم اللي على شاشة العداد كل كام يوم. كل ما القراءات تكتر، التوقع يبقى أدق.",
     history:"السجل", thDate:"التاريخ", thValue:"القيمة", thUsed:"الاستهلاك من آخر قراءة",
@@ -322,25 +324,25 @@ const STR = {
     demo:"This is example data so you can see how the app works. It isn't saved.", startMine:"Start with my data",
     elec:"Electricity", water:"Water", elecShort:"Electricity", waterShort:"Water",
     egp:"EGP", cur:"EGP",
-    addTitle:"Add a reading or top-up", meter:"Meter", kind:"Type", reading:"Balance reading", recharge:"Top-up",
-    when:"Date and time", valReading:"Balance shown on the meter ({u})", valRecharge:"Amount topped up ({u})",
+    addTitle:"Add a reading or recharge", meter:"Meter", kind:"Type", reading:"Reading", recharge:"Recharge",
+    when:"Date and time", valReading:"Meter balance ({u})", valRecharge:"Recharge amount ({u})",
     placeholder:"e.g. 85.5", submit:"Save entry",
     formHint:"Read the number on the meter screen every few days. The more readings, the better the forecast.",
     history:"History", thDate:"Date", thValue:"Value", thUsed:"Used since last reading",
-    logEmpty:"No entries yet.", tagReading:"Reading", tagRecharge:"Top-up", del:"Delete", sure:"Sure?",
+    logEmpty:"No entries yet.", tagReading:"Reading", tagRecharge:"Recharge", del:"Delete", sure:"Sure?",
     usedIn:"{v} {u} in {d} days",
-    pill_ok:"OK", pill_warn:"Top up soon", pill_bad:"Top up now", pill_none:"Needs readings",
+    pill_ok:"OK", pill_warn:"Recharge soon", pill_bad:"Recharge now", pill_none:"Needs readings",
     cardEmpty:"Enter the balance shown on the {m} meter now, using the form below.",
     lastReadingU:"{u}, last reading",
-    needSecond:"Add another reading after a day or more so the app can work out your usage and forecast the top-up date.",
+    needSecond:"Add another reading after a day or more so the app can work out your usage and forecast the recharge date.",
     remaining:"{u} left (approx.)",
     perDay:"Cost per day", perMonth:"Cost per month", lasts:"Lasts", emptyOn:"Runs out on",
-    rechargeBy:"Top up by", rechargedMonth:"Topped up this month",
+    rechargeBy:"Recharge by", rechargedMonth:"Recharged this month",
     nDays:"{n} days", lessDay:"Less than a day", overYears:"Over 2 years", noUse:"No usage", today:"Today",
     rateHint:"Rate {r} {u}/day, from the last {w} days. Last reading {t}.",
-    alertBad:"{m} balance is almost out ({d}). Top up today.",
-    alertWarn:"{m}: about {n} days left, runs out {date}. Top up before then.",
-    alertOk:"Electricity and water are fine.", alertNext:" Next top-up: {date}.",
+    alertBad:"{m} balance is almost out ({d}). Recharge today.",
+    alertWarn:"{m}: about {n} days left, runs out {date}. Recharge before then.",
+    alertOk:"Electricity and water are fine.", alertNext:" Next recharge: {date}.",
     language:"Language", appearance:"Appearance", modeAuto:"Auto", modeLight:"Light", modeDark:"Dark",
     palSea:"Sea", palGolf:"Golf", palSand:"Sand", palGraphite:"Graphite",
     meters:"Low-balance alert", alertDays:"Days of warning",
@@ -354,7 +356,7 @@ const STR = {
     notifOn:"Notifications are on. You'll get them when you open the app, and in the background if your phone supports it.",
     notifDenied:"Notifications are blocked for this site. Allow them in your browser settings.",
     notifAsk:"Turn them on to get an alert before your balance runs out.",
-    notifBad:"{m} balance is almost out. Top up today.", notifWarn:"About {n} days left on {m}. Top up before {date}.",
+    notifBad:"{m} balance is almost out. Recharge today.", notifWarn:"About {n} days left on {m}. Recharge before {date}.",
     backupTitle:"Backup",
     backupHint:"Without sync, your data is saved on this phone only. Download a backup now and then.",
     exportBtn:"Download backup", importBtn:"Restore from backup",
@@ -586,7 +588,7 @@ function shareWithWorker(){
   if(!("caches" in window) || demo) return;
   const due=["elec","water"].map(analyze).filter(a=>a.rechargeBy).map(a=>({key:a.key,label:meterName(a.key),rechargeBy:a.rechargeBy,emptyAt:a.emptyAt}));
   const payload={due,saved:Date.now(),lang:prefs.lang,dir:prefs.lang==="en"?"ltr":"rtl",
-    text:{bad:L().notifBad, soon:prefs.lang==="en"?"About {n} days left on {m}. Top up soon.":"فاضل حوالي {n} يوم في رصيد {m}. اشحن قريب."}};
+    text:{bad:L().notifBad, soon:prefs.lang==="en"?"About {n} days left on {m}. Recharge soon.":"فاضل حوالي {n} يوم في رصيد {m}. اشحن قريب."}};
   caches.open("chalet-state").then(c=>c.put("state.json",new Response(JSON.stringify(payload),{headers:{"Content-Type":"application/json"}}))).catch(()=>{});
 }
 function normalize(d){
