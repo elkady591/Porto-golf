@@ -196,6 +196,7 @@ fieldset{border-radius:16px}
 .totals{gap:0;padding:6px 20px}
 .totals .li{display:flex;justify-content:space-between;gap:10px;padding:13px 0;border-bottom:1px solid var(--line)}
 .totals .li:last-child{border-bottom:0}
+.totals .li.actual{margin-top:8px;border-top:6px solid var(--bg);padding-top:16px}
 .totals .li span{color:var(--muted)}
 .totals .li b{font-weight:700}
 .totals .li.total b{color:var(--accent);font-size:18px}
@@ -401,7 +402,7 @@ const STR = {
     alertOk:"الكهرباء والمية تمام.", alertNext:" أقرب ميعاد شحن: {date}.",
     language:"اللغة", layoutTitle:"شكل الصفحة", layOriginal:"Original", layRing:"الدايرة", laySummary:"الملخص",
     daysLeftOne:"يوم باقي", daysLeftMany:"أيام باقية", balance:"الرصيد", monthTotal:"الإجمالي في الشهر", monthOf:"{m} في الشهر",
-    nextRecharge:"الشحنة الجاية", perDayTotal:"في اليوم", quickRead:"قراءة", quickRech:"شحن", details:"التفاصيل", inDays:"بعد {n} يوم", lastsN:"يكفي {n}", noForecast:"محتاج قراءة تانية",
+    nextRecharge:"الشحنة الجاية", perDayTotal:"في اليوم", estimate:"تقدير حسب استهلاكك", rechargedActual:"شحنت فعلاً الشهر ده", quickRead:"قراءة", quickRech:"شحن", details:"التفاصيل", inDays:"بعد {n} يوم", lastsN:"يكفي {n}", noForecast:"محتاج قراءة تانية",
     appearance:"المظهر", modeAuto:"تلقائي", modeLight:"فاتح", modeDark:"غامق",
     palSea:"بحر", palGolf:"جولف", palSand:"رملي", palGraphite:"رصاصي",
     meters:"التنبيه قبل ما الرصيد يخلص", alertDays:"نبّهني قبلها بكام يوم",
@@ -450,7 +451,7 @@ const STR = {
     alertOk:"Electricity and water are fine.", alertNext:" Next recharge: {date}.",
     language:"Language", layoutTitle:"Page layout", layOriginal:"Original", layRing:"Ring", laySummary:"Summary",
     daysLeftOne:"day left", daysLeftMany:"days left", balance:"Balance", monthTotal:"Total per month", monthOf:"{m} per month",
-    nextRecharge:"Next recharge", perDayTotal:"per day", quickRead:"Reading", quickRech:"Recharge", details:"Details", inDays:"in {n} days", lastsN:"lasts {n}", noForecast:"Needs another reading",
+    nextRecharge:"Next recharge", perDayTotal:"per day", estimate:"estimate from your usage", rechargedActual:"Actually recharged this month", quickRead:"Reading", quickRech:"Recharge", details:"Details", inDays:"in {n} days", lastsN:"lasts {n}", noForecast:"Needs another reading",
     appearance:"Appearance", modeAuto:"Auto", modeLight:"Light", modeDark:"Dark",
     palSea:"Sea", palGolf:"Golf", palSand:"Sand", palGraphite:"Graphite",
     meters:"Low-balance alert", alertDays:"Days of warning",
@@ -665,13 +666,23 @@ function ringCard(a){
   </article>`;
 }
 
+// Monthly figures are rounded per meter first, so the total is exactly the sum of the rows shown.
+function monthTotals(list){
+  const known=list.filter(a=>a.perMonth!=null);
+  const rows=known.map(a=>({key:a.key, month:Math.round(a.perMonth)}));
+  return {rows, month:rows.reduce((s,r)=>s+r.month,0), day:known.reduce((s,a)=>s+a.perDay,0),
+    rech:list.reduce((s,a)=>s+a.rechargedThisMonth,0)};
+}
+const egp0 = n => `${fmt(n,0)} ${t("cur")}`;
+const monthRows = m => m.rows.map(r=>`<div class="li"><span>${t("monthOf",{m:meterName(r.key)})}</span><b class="num">${egp0(r.month)}</b></div>`).join("");
+const rechRow = m => `<div class="li actual"><span>${t("rechargedActual")}</span><b class="num">${egp0(m.rech)}</b></div>`;
+
 function totalsCard(list){
-  const rows=list.filter(a=>a.perMonth!=null).map(a=>`<div class="li"><span>${t("monthOf",{m:meterName(a.key)})}</span><b class="num">${money(a.perMonth)}</b></div>`);
-  const total=list.reduce((s,a)=>s+(a.perMonth||0),0), rech=list.reduce((s,a)=>s+a.rechargedThisMonth,0);
+  const m=monthTotals(list);
   return `<article class="card totals">
-    ${rows.join("")}
-    <div class="li total"><span>${t("monthTotal")}</span><b class="num">${money(total)}</b></div>
-    <div class="li"><span>${t("rechargedMonth")}</span><b class="num">${money(rech)}</b></div>
+    ${monthRows(m)}
+    <div class="li total"><span>${t("monthTotal")}</span><b class="num">${egp0(m.month)}</b></div>
+    ${rechRow(m)}
   </article>`;
 }
 
@@ -705,13 +716,12 @@ function summaryView(list){
       ${due}${quick}
     </article>`;
   }).join("");
-  const known=list.filter(a=>a.perMonth!=null);
-  const month=known.reduce((s,a)=>s+a.perMonth,0), day=known.reduce((s,a)=>s+a.perDay,0);
-  const rech=list.reduce((s,a)=>s+a.rechargedThisMonth,0);
+  const m=monthTotals(list);
   const totals=`<article class="card totals sum-totals">
-    <div class="sum-head"><span>${t("monthTotal")}</span><b class="num">${money(month)}</b><span class="num">${money(day)} ${t("perDayTotal")}</span></div>
-    ${known.map(a=>`<div class="li"><span>${t("monthOf",{m:meterName(a.key)})}</span><b class="num">${money(a.perMonth)}</b></div>`).join("")}
-    <div class="li"><span>${t("rechargedMonth")}</span><b class="num">${money(rech)}</b></div>
+    <div class="sum-head"><span>${t("monthTotal")}</span><b class="num">${egp0(m.month)}</b>
+      <span class="num">${fmt(m.day,1)} ${t("cur")} ${t("perDayTotal")} · ${t("estimate")}</span></div>
+    ${monthRows(m)}
+    ${rechRow(m)}
   </article>`;
   return `<div class="duo">${minis}</div>${totals}`;
 }
