@@ -207,9 +207,9 @@ fieldset{border-radius:16px}
 .split .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
 .split b{font-size:18px}
 .split small{color:var(--muted);font-size:13px}
-.spend-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:12px}
-.spend-foot span{color:var(--muted);font-size:14px}
-.spend-foot b{font-size:16px}
+.month-rech{margin:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;background:var(--ok-soft);color:var(--ok);border-radius:14px;padding:10px 14px}
+.month-rech span{font-weight:500;font-size:14px} .month-rech b{font-size:17px} .month-rech small{font-size:13px;opacity:.85}
+.month-rech.none{background:var(--bg);color:var(--muted);font-size:14px}
 
 /* Summary layout */
 header{flex-wrap:wrap}
@@ -408,7 +408,7 @@ const STR = {
     alertOk:"الكهرباء والمية تمام.", alertNext:" أقرب ميعاد شحن: {date}.",
     language:"اللغة", layoutTitle:"شكل الصفحة", layOriginal:"Original", layRing:"الدايرة", laySummary:"Summary",
     daysLeftOne:"يوم باقي", daysLeftMany:"أيام باقية", balance:"الرصيد", monthTotal:"المتوقع في الشهر", monthOf:"{m} في الشهر",
-    nextRecharge:"الشحنة الجاية", perDayTotal:"في اليوم", aboutPerDay:"حوالي {v} ج في اليوم، حسب استهلاكك", rechargedActual:"شحنت فعلاً الشهر ده", quickRead:"قراءة", quickRech:"شحن", details:"التفاصيل", inDays:"بعد {n} يوم", lastsN:"يكفي {n}", noForecast:"محتاج قراءة تانية",
+    nextRecharge:"الشحنة الجاية", perDayTotal:"في اليوم", aboutPerDay:"حوالي {v} ج في اليوم، حسب استهلاكك", rechargedMonthLog:"شحنت الشهر ده", noRechMonth:"ماشحنتش الشهر ده لسه", quickRead:"قراءة", quickRech:"شحن", details:"التفاصيل", inDays:"بعد {n} يوم", lastsN:"يكفي {n}", noForecast:"محتاج قراءة تانية",
     appearance:"المظهر", modeAuto:"تلقائي", modeLight:"فاتح", modeDark:"غامق",
     palSea:"بحر", palGolf:"جولف", palSand:"رملي", palGraphite:"رصاصي",
     meters:"التنبيه قبل ما الرصيد يخلص", alertDays:"نبّهني قبلها بكام يوم",
@@ -457,7 +457,7 @@ const STR = {
     alertOk:"Electricity and water are fine.", alertNext:" Next recharge: {date}.",
     language:"Language", layoutTitle:"Page layout", layOriginal:"Original", layRing:"Ring", laySummary:"Summary",
     daysLeftOne:"day left", daysLeftMany:"days left", balance:"Balance", monthTotal:"Expected per month", monthOf:"{m} per month",
-    nextRecharge:"Next recharge", perDayTotal:"per day", aboutPerDay:"About {v} EGP a day, from your usage", rechargedActual:"Actually recharged this month", quickRead:"Reading", quickRech:"Recharge", details:"Details", inDays:"in {n} days", lastsN:"lasts {n}", noForecast:"Needs another reading",
+    nextRecharge:"Next recharge", perDayTotal:"per day", aboutPerDay:"About {v} EGP a day, from your usage", rechargedMonthLog:"Recharged this month", noRechMonth:"No recharge yet this month", quickRead:"Reading", quickRech:"Recharge", details:"Details", inDays:"in {n} days", lastsN:"lasts {n}", noForecast:"Needs another reading",
     appearance:"Appearance", modeAuto:"Auto", modeLight:"Light", modeDark:"Dark",
     palSea:"Sea", palGolf:"Golf", palSand:"Sand", palGraphite:"Graphite",
     meters:"Low-balance alert", alertDays:"Days of warning",
@@ -617,6 +617,17 @@ function renderAlerts(list){
   $("#alerts").innerHTML=items.join("");
 }
 
+// What was actually recharged on this meter since the 1st of the month.
+function monthRecharges(list){
+  const start=new Date(); start.setDate(1); start.setHours(0,0,0,0);
+  const r=list.filter(e=>e.k==="recharge" && e.t>=start.getTime());
+  if(!r.length) return `<p class="month-rech none">${t("noRechMonth")}</p>`;
+  const n=r.length, sum=r.reduce((s,e)=>s+e.v,0);
+  const times = prefs.lang==="en" ? (n===1?"once":n===2?"twice":`${n} times`)
+    : (n===1?"مرة واحدة":n===2?"مرتين":n<=10?`${fmt(n,0)} مرات`:`${fmt(n,0)} مرة`);
+  return `<p class="month-rech"><span>${t("rechargedMonthLog")}</span><b class="num">${fmt(sum,0)} ${t("cur")}</b><small>${times}</small></p>`;
+}
+
 function renderLog(){
   const usedById={};
   for(const k of ["elec","water"]) for(const iv of analyze(k).intervals) usedById[iv.readId]=iv;
@@ -635,6 +646,7 @@ function renderLog(){
     }).join("");
     return `<section class="panel">
       <h2>${t("histOf",{m:meterName(k)})}</h2>
+      ${monthRecharges(list)}
       ${list.length ? `<div class="tablewrap"><table class="log">
         <thead><tr><th>${t("thDate")}</th><th>${t("kind")}</th><th>${t("thValue")}</th><th>${t("thUsed")}</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table></div>` : `<p class="hint">${t("logEmpty")}</p>`}
@@ -698,7 +710,6 @@ function totalsCard(list){
       <b class="num">${egp0(r.month)}</b>
       <small class="num">${fmt(pct(r),0)}${prefs.lang==="en"?"%":"٪"}</small>
     </div>`).join("")}</div>
-    <div class="spend-foot"><span>${t("rechargedActual")}</span><b class="num">${egp0(m.rech)}</b></div>
   </article>`;
 }
 
