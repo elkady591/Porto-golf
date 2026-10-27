@@ -179,6 +179,41 @@ button.ghost,.filelabel{border-radius:14px}
 dialog.sheet{border-radius:26px}
 .swatch{border-radius:16px}
 fieldset{border-radius:16px}
+
+/* Ring layout */
+.meters.lay-ring,.meters.lay-summary{grid-template-columns:1fr}
+.ring{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center;position:relative}
+.ring svg{width:150px;height:150px;grid-row:1;grid-column:1}
+.ring-mid{grid-row:1;grid-column:1;display:grid;justify-items:center;align-content:center;text-align:center}
+.ring-mid b{font-family:var(--display);font-size:38px;font-weight:700;line-height:1.1}
+.ring-mid span{color:var(--muted);font-size:13px}
+.ring-side{margin:0;display:grid;gap:8px}
+.ring-side div{display:grid}
+.ring-side dt{color:var(--muted);font-size:13px}
+.ring-side dd{margin:0;font-weight:700;font-size:17px}
+.ring-side dd.big-val{font-family:var(--display);font-size:26px;line-height:1.2}
+.elec .big-val{color:var(--elec)} .water .big-val{color:var(--water)}
+.totals{gap:0;padding:6px 20px}
+.totals .li{display:flex;justify-content:space-between;gap:10px;padding:13px 0;border-bottom:1px solid var(--line)}
+.totals .li:last-child{border-bottom:0}
+.totals .li span{color:var(--muted)}
+.totals .li b{font-weight:700}
+.totals .li.total b{color:var(--accent);font-size:18px}
+.totals .li.total span{color:var(--fg);font-weight:600}
+
+/* Summary layout */
+.next{background:var(--hero-bg);color:var(--hero-fg);gap:4px}
+.next>span{opacity:.85;font-size:14px}
+.next>b{font-size:22px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.glyph-s{display:inline-grid}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mini{gap:6px;padding:16px;align-content:start}
+.mini .glyph{width:38px;height:38px}
+.mini-name{color:var(--muted)}
+.mini>b{font-family:var(--display);font-size:30px;font-weight:700;line-height:1.1}
+.mini.elec>b{color:var(--elec)} .mini.water>b{color:var(--water)}
+.mini-sub{color:var(--muted);font-size:13px}
+.mini .meter-bar{height:7px;margin-top:auto}
 </style>
 </head>
 <body>
@@ -246,6 +281,15 @@ fieldset{border-radius:16px}
       <div class="seg" id="segLang">
         <button type="button" data-v="ar">عربي</button>
         <button type="button" data-v="en">English</button>
+      </div>
+    </section>
+
+    <section>
+      <h3 data-i18n="layoutTitle"></h3>
+      <div class="seg" id="segLayout">
+        <button type="button" data-v="original" data-i18n="layOriginal"></button>
+        <button type="button" data-v="ring" data-i18n="layRing"></button>
+        <button type="button" data-v="summary" data-i18n="laySummary"></button>
       </div>
     </section>
 
@@ -334,7 +378,10 @@ const STR = {
     alertBad:"رصيد {m} قرب يخلص ({d}). اشحن النهارده.",
     alertWarn:"{m}: فاضل حوالي {n} يوم، والرصيد هيخلص {date}. اشحن قبل كده.",
     alertOk:"الكهرباء والمية تمام.", alertNext:" أقرب ميعاد شحن: {date}.",
-    language:"اللغة", appearance:"المظهر", modeAuto:"تلقائي", modeLight:"فاتح", modeDark:"غامق",
+    language:"اللغة", layoutTitle:"شكل الصفحة", layOriginal:"Original", layRing:"الدايرة", laySummary:"الملخص",
+    daysLeftOne:"يوم باقي", daysLeftMany:"أيام باقية", balance:"الرصيد", monthTotal:"الإجمالي في الشهر", monthOf:"{m} في الشهر",
+    nextRecharge:"الشحنة الجاية", inDays:"بعد {n} يوم", lastsN:"يكفي {n}", noForecast:"محتاج قراءة تانية",
+    appearance:"المظهر", modeAuto:"تلقائي", modeLight:"فاتح", modeDark:"غامق",
     palSea:"بحر", palGolf:"جولف", palSand:"رملي", palGraphite:"رصاصي",
     meters:"التنبيه قبل ما الرصيد يخلص", alertDays:"نبّهني قبلها بكام يوم",
     syncTitle:"المزامنة مع Google Sheets",
@@ -380,7 +427,10 @@ const STR = {
     alertBad:"{m} balance is almost out ({d}). Recharge today.",
     alertWarn:"{m}: about {n} days left, runs out {date}. Recharge before then.",
     alertOk:"Electricity and water are fine.", alertNext:" Next recharge: {date}.",
-    language:"Language", appearance:"Appearance", modeAuto:"Auto", modeLight:"Light", modeDark:"Dark",
+    language:"Language", layoutTitle:"Page layout", layOriginal:"Original", layRing:"Ring", laySummary:"Summary",
+    daysLeftOne:"day left", daysLeftMany:"days left", balance:"Balance", monthTotal:"Total per month", monthOf:"{m} per month",
+    nextRecharge:"Next recharge", inDays:"in {n} days", lastsN:"lasts {n}", noForecast:"Needs another reading",
+    appearance:"Appearance", modeAuto:"Auto", modeLight:"Light", modeDark:"Dark",
     palSea:"Sea", palGolf:"Golf", palSand:"Sand", palGraphite:"Graphite",
     meters:"Low-balance alert", alertDays:"Days of warning",
     syncTitle:"Google Sheets sync",
@@ -404,7 +454,7 @@ const STR = {
 
 /* ---------- display preferences (this device only) ---------- */
 const PREFS_KEY = KEY+"-prefs";
-let prefs = {lang:"ar", mode:"auto", palette:"sea"};
+let prefs = {lang:"ar", mode:"auto", palette:"sea", layout:"original"};
 try{ Object.assign(prefs, JSON.parse(localStorage.getItem(PREFS_KEY)||"{}")); }catch(e){}
 const L = () => STR[prefs.lang] || STR.ar;
 const t = (k, vars={}) => (L()[k] ?? STR.ar[k] ?? k).replace(/\{(\w+)\}/g, (_,n)=> vars[n] ?? "");
@@ -563,6 +613,73 @@ function renderLog(){
   }).join("");
 }
 
+// Arabic uses the plural only for 3–10; English only for anything but 1.
+const daysLeftWord = n => (prefs.lang==="en" ? n!==1 : n>=3 && n<=10) ? t("daysLeftMany") : t("daysLeftOne");
+
+function ringCard(a){
+  if(a.status==="none") return meterCard(a);
+  const m=METERS[a.key], inf=a.daysLeft===Infinity, d=inf?null:Math.max(0,a.daysLeft);
+  const C=2*Math.PI*50, frac=inf?1:Math.min(1,d/30);
+  const rb = a.rechargeBy==null?"—":(a.rechargeBy<=Date.now()?t("today"):fmtDateS(a.rechargeBy));
+  return `<article class="card ring-card ${a.key}">
+    <div class="meter-head">
+      <div class="meter-title"><span class="glyph">${m.icon}</span><h2>${meterName(a.key)}</h2></div>
+      <span class="pill ${a.status}">${t("pill_"+a.status)}</span>
+    </div>
+    <div class="ring">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg)" stroke-width="12"/>
+        <circle cx="60" cy="60" r="50" fill="none" stroke="var(--${a.key})" stroke-width="12" stroke-linecap="round"
+          stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-frac)).toFixed(1)}" transform="rotate(-90 60 60)"/>
+      </svg>
+      <div class="ring-mid"><b class="num">${inf?"∞":fmt(d,0)}</b><span>${inf?t("noUse"):daysLeftWord(Math.round(d))}</span></div>
+      <dl class="ring-side">
+        <div><dt>${t("balance")}</dt><dd class="num big-val">${fmt(a.balance)} ${t("cur")}</dd></div>
+        <div><dt>${t("perDay")}</dt><dd class="num">${money(a.perDay)}</dd></div>
+        <div><dt>${t("perMonth")}</dt><dd class="num">${money(a.perMonth)}</dd></div>
+      </dl>
+    </div>
+    <div class="due ${a.status}"><span>${t("rechargeBy")}</span><b>${rb}</b></div>
+  </article>`;
+}
+
+function totalsCard(list){
+  const rows=list.filter(a=>a.perMonth!=null).map(a=>`<div class="li"><span>${t("monthOf",{m:meterName(a.key)})}</span><b class="num">${money(a.perMonth)}</b></div>`);
+  const total=list.reduce((s,a)=>s+(a.perMonth||0),0), rech=list.reduce((s,a)=>s+a.rechargedThisMonth,0);
+  return `<article class="card totals">
+    ${rows.join("")}
+    <div class="li total"><span>${t("monthTotal")}</span><b class="num">${money(total)}</b></div>
+    <div class="li"><span>${t("rechargedMonth")}</span><b class="num">${money(rech)}</b></div>
+  </article>`;
+}
+
+function summaryView(list){
+  const due=list.filter(a=>a.rechargeBy!=null).sort((x,y)=>x.rechargeBy-y.rechargeBy)[0];
+  let hero="";
+  if(due){
+    const n=Math.max(0,Math.ceil((due.rechargeBy-Date.now())/DAY));
+    hero=`<article class="card next ${due.status}">
+      <span>${t("nextRecharge")}</span>
+      <b><span class="glyph-s">${METERS[due.key].icon}</span>${meterName(due.key)} · ${n===0?t("today"):fmtDateS(due.rechargeBy)}</b>
+      ${n>0?`<span>${t("inDays",{n:fmt(n,0)})}</span>`:""}
+    </article>`;
+  }
+  const minis=list.map(a=>{
+    const frac = a.daysLeft==null ? 0 : a.daysLeft===Infinity ? 1 : Math.max(0,Math.min(1,a.daysLeft/30));
+    const sub = a.balance==null ? t("cardEmpty",{m:meterName(a.key)})
+      : a.status==="none" ? `${t("egp")} · ${t("noForecast")}`
+      : `${t("egp")} · ${t("lastsN",{n:daysText(a.daysLeft)})}`;
+    return `<article class="card mini ${a.key}">
+      <span class="glyph">${METERS[a.key].icon}</span>
+      <span class="mini-name">${meterName(a.key)}</span>
+      <b class="num">${a.balance==null?"—":fmt(a.balance)}</b>
+      <span class="mini-sub">${sub}</span>
+      <div class="meter-bar ${a.status}" aria-hidden="true"><i style="width:${(frac*100).toFixed(1)}%"></i></div>
+    </article>`;
+  }).join("");
+  return `${hero}<div class="duo">${minis}</div>${totalsCard(list)}`;
+}
+
 function renderSettings(){
   $("#settings").innerHTML=`<div class="row">${["elec","water"].map(k=>`
       <label for="s-${k}-alert" data-k="${k}">${meterName(k)}: ${t("alertDays")}
@@ -572,7 +689,11 @@ function renderSettings(){
 
 function render(){
   const list=["elec","water"].map(analyze);
-  $("#meters").innerHTML=list.map(meterCard).join("");
+  const lay=prefs.layout;
+  $("#meters").className="meters lay-"+lay;
+  $("#meters").innerHTML = lay==="ring" ? list.map(ringCard).join("")+totalsCard(list)
+    : lay==="summary" ? summaryView(list)
+    : list.map(meterCard).join("");
   renderAlerts(list);
   renderLog();
   $("#demoBanner").hidden=!demo;
@@ -591,7 +712,7 @@ function applyPrefs(){
   document.querySelectorAll("[data-i18n-ph]").forEach(el=>{ el.placeholder=t(el.dataset.i18nPh); });
   document.querySelectorAll("[data-i18n-aria]").forEach(el=>{ el.setAttribute("aria-label",t(el.dataset.i18nAria)); el.title=t(el.dataset.i18nAria); });
   const press=(id,v)=>document.querySelectorAll(id+" [data-v]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===v)));
-  press("#segLang",prefs.lang); press("#segMode",prefs.mode); press("#swatches",prefs.palette);
+  press("#segLang",prefs.lang); press("#segMode",prefs.mode); press("#segLayout",prefs.layout); press("#swatches",prefs.palette);
   requestAnimationFrame(()=>{ const c=getComputedStyle(r).getPropertyValue("--accent").trim(); if(c) document.querySelector('meta[name="theme-color"]').content=c; });
   if(saveKey) $("#saveState").textContent=t(saveKey);
 }
@@ -738,6 +859,7 @@ bindSeg("#segMeter",(v,b)=>{ sel.meter=v; pressOnly("#segMeter",b); render(); })
 bindSeg("#segKind",(v,b)=>{ sel.kind=v; pressOnly("#segKind",b); render(); });
 bindSeg("#segLang",v=>{ setPref("lang",v); if(syncMsg.k) setSync(syncMsg.k,syncMsg.v); });
 bindSeg("#segMode",v=>setPref("mode",v));
+bindSeg("#segLayout",v=>setPref("layout",v));
 bindSeg("#swatches",v=>setPref("palette",v));
 
 const dlg=$("#settingsDlg");
