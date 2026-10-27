@@ -1,5 +1,5 @@
 // Offline shell + background reminder check for Porto Golf.
-const SHELL = "chalet-shell-v17";
+const SHELL = "chalet-shell-v18";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
