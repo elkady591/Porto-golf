@@ -202,15 +202,27 @@ fieldset{border-radius:16px}
 .totals .li.total span{color:var(--fg);font-weight:600}
 
 /* Summary layout */
-.next{background:var(--hero-bg);color:var(--hero-fg);gap:4px}
-.next>span{opacity:.85;font-size:14px}
-.next>b{font-size:22px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+header{flex-wrap:wrap}
+.head-next{order:3;flex-basis:100%;display:grid;gap:2px;background:rgba(255,255,255,.14);border-radius:18px;padding:14px 16px}
+.head-next>span{opacity:.85;font-size:14px}
+.head-next>b{font-size:21px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .glyph-s{display:inline-grid}
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .mini{gap:6px;padding:16px;align-content:start}
 .mini .glyph{width:38px;height:38px}
 .mini-name{color:var(--muted)}
 .mini>b{font-family:var(--display);font-size:30px;font-weight:700;line-height:1.1}
+.mini>b small{font-size:15px;font-weight:600;color:var(--muted)}
+.mini-due{font-size:13px;font-weight:600;color:var(--ok)}
+.mini-due.warn{color:var(--warn)} .mini-due.bad{color:var(--bad)}
+.mini.tappable{cursor:pointer}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.quick button{padding:7px 4px;font-size:13px;border-radius:12px;white-space:nowrap}
+.sum-head{display:grid;justify-items:start;padding:14px 0 12px;border-bottom:1px solid var(--line)}
+.sum-head>span{color:var(--muted);font-size:14px}
+.sum-head>b{font-family:var(--display);font-size:34px;color:var(--accent);line-height:1.2}
+#detailBody .card{box-shadow:none;padding:0}
+#detailBody .meter-head{display:none}
 .mini.elec>b{color:var(--elec)} .mini.water>b{color:var(--water)}
 .mini-sub{color:var(--muted);font-size:13px}
 .mini .meter-bar{height:7px;margin-top:auto}
@@ -223,6 +235,7 @@ fieldset{border-radius:16px}
       <h1>Porto Golf</h1>
       <p class="sub" data-i18n="sub"></p>
     </div>
+    <div class="head-next" id="headNext" hidden></div>
     <div class="head-side">
       <button type="button" class="gear" id="gearBtn" data-i18n-aria="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -269,6 +282,14 @@ fieldset{border-radius:16px}
 
   <div class="history" id="log"></div>
 </div>
+
+<dialog class="sheet" id="detailDlg" aria-labelledby="detailTitle">
+  <div class="sheet-head">
+    <h2 id="detailTitle"></h2>
+    <button type="button" class="close" id="closeDetail" data-i18n-aria="close">✕</button>
+  </div>
+  <div class="sheet-body" id="detailBody"></div>
+</dialog>
 
 <dialog class="sheet" id="settingsDlg" aria-labelledby="settingsTitle">
   <div class="sheet-head">
@@ -380,7 +401,7 @@ const STR = {
     alertOk:"الكهرباء والمية تمام.", alertNext:" أقرب ميعاد شحن: {date}.",
     language:"اللغة", layoutTitle:"شكل الصفحة", layOriginal:"Original", layRing:"الدايرة", laySummary:"الملخص",
     daysLeftOne:"يوم باقي", daysLeftMany:"أيام باقية", balance:"الرصيد", monthTotal:"الإجمالي في الشهر", monthOf:"{m} في الشهر",
-    nextRecharge:"الشحنة الجاية", inDays:"بعد {n} يوم", lastsN:"يكفي {n}", noForecast:"محتاج قراءة تانية",
+    nextRecharge:"الشحنة الجاية", perDayTotal:"في اليوم", quickRead:"قراءة", quickRech:"شحن", details:"التفاصيل", inDays:"بعد {n} يوم", lastsN:"يكفي {n}", noForecast:"محتاج قراءة تانية",
     appearance:"المظهر", modeAuto:"تلقائي", modeLight:"فاتح", modeDark:"غامق",
     palSea:"بحر", palGolf:"جولف", palSand:"رملي", palGraphite:"رصاصي",
     meters:"التنبيه قبل ما الرصيد يخلص", alertDays:"نبّهني قبلها بكام يوم",
@@ -429,7 +450,7 @@ const STR = {
     alertOk:"Electricity and water are fine.", alertNext:" Next recharge: {date}.",
     language:"Language", layoutTitle:"Page layout", layOriginal:"Original", layRing:"Ring", laySummary:"Summary",
     daysLeftOne:"day left", daysLeftMany:"days left", balance:"Balance", monthTotal:"Total per month", monthOf:"{m} per month",
-    nextRecharge:"Next recharge", inDays:"in {n} days", lastsN:"lasts {n}", noForecast:"Needs another reading",
+    nextRecharge:"Next recharge", perDayTotal:"per day", quickRead:"Reading", quickRech:"Recharge", details:"Details", inDays:"in {n} days", lastsN:"lasts {n}", noForecast:"Needs another reading",
     appearance:"Appearance", modeAuto:"Auto", modeLight:"Light", modeDark:"Dark",
     palSea:"Sea", palGolf:"Golf", palSand:"Sand", palGraphite:"Graphite",
     meters:"Low-balance alert", alertDays:"Days of warning",
@@ -581,7 +602,7 @@ function renderAlerts(list){
     if(a.status==="bad") items.push(`<div class="alert bad"><span class="dot"></span><span>${t("alertBad",{m:n,d:daysText(a.daysLeft)})}</span></div>`);
     else if(a.status==="warn") items.push(`<div class="alert warn"><span class="dot"></span><span>${t("alertWarn",{m:n,n:fmt(a.daysLeft,0),date:fmtDate(a.emptyAt)})}</span></div>`);
   }
-  if(!items.length && list.every(a=>a.status==="ok")){
+  if(!items.length && list.every(a=>a.status==="ok") && prefs.layout!=="summary"){
     const rb=list.map(a=>a.rechargeBy).filter(Boolean);
     items.push(`<div class="alert ok"><span class="dot"></span><span>${t("alertOk")}${rb.length?t("alertNext",{date:fmtDate(Math.min(...rb))}):""}</span></div>`);
   }
@@ -653,31 +674,47 @@ function totalsCard(list){
   </article>`;
 }
 
-function summaryView(list){
+// Extras on the summary page: tap a card for details, and quick reading/recharge buttons.
+const SUMMARY_PLUS = true;
+
+function headNext(list){
   const due=list.filter(a=>a.rechargeBy!=null).sort((x,y)=>x.rechargeBy-y.rechargeBy)[0];
-  let hero="";
-  if(due){
-    const n=Math.max(0,Math.ceil((due.rechargeBy-Date.now())/DAY));
-    hero=`<article class="card next ${due.status}">
-      <span>${t("nextRecharge")}</span>
-      <b><span class="glyph-s">${METERS[due.key].icon}</span>${meterName(due.key)} · ${n===0?t("today"):fmtDateS(due.rechargeBy)}</b>
-      ${n>0?`<span>${t("inDays",{n:fmt(n,0)})}</span>`:""}
-    </article>`;
-  }
+  if(!due) return "";
+  const n=Math.max(0,Math.ceil((due.rechargeBy-Date.now())/DAY));
+  return `<span>${t("nextRecharge")}</span>
+    <b><span class="glyph-s">${METERS[due.key].icon}</span>${meterName(due.key)} · ${n===0?t("today"):fmtDateS(due.rechargeBy)}</b>
+    ${n>0?`<span>${t("inDays",{n:fmt(n,0)})}</span>`:""}`;
+}
+
+function summaryView(list){
   const minis=list.map(a=>{
     const frac = a.daysLeft==null ? 0 : a.daysLeft===Infinity ? 1 : Math.max(0,Math.min(1,a.daysLeft/30));
     const sub = a.balance==null ? t("cardEmpty",{m:meterName(a.key)})
-      : a.status==="none" ? `${t("egp")} · ${t("noForecast")}`
-      : `${t("egp")} · ${t("lastsN",{n:daysText(a.daysLeft)})}`;
-    return `<article class="card mini ${a.key}">
+      : a.status==="none" ? t("noForecast")
+      : t("lastsN",{n:daysText(a.daysLeft)});
+    const due = a.rechargeBy==null ? "" : `<span class="mini-due ${a.status}">${t("rechargeBy")} ${a.rechargeBy<=Date.now()?t("today"):fmtDateS(a.rechargeBy)}</span>`;
+    const quick = SUMMARY_PLUS ? `<div class="quick">
+        <button type="button" class="ghost" data-quick="reading" data-m="${a.key}">+ ${t("quickRead")}</button>
+        <button type="button" class="ghost" data-quick="recharge" data-m="${a.key}">+ ${t("quickRech")}</button>
+      </div>` : "";
+    return `<article class="card mini ${a.key}${SUMMARY_PLUS?" tappable":""}" ${SUMMARY_PLUS?`data-detail="${a.key}" tabindex="0" role="button"`:""}>
       <span class="glyph">${METERS[a.key].icon}</span>
       <span class="mini-name">${meterName(a.key)}</span>
-      <b class="num">${a.balance==null?"—":fmt(a.balance)}</b>
+      <b class="num">${a.balance==null?"—":fmt(a.balance)} <small>${t("cur")}</small></b>
       <span class="mini-sub">${sub}</span>
       <div class="meter-bar ${a.status}" aria-hidden="true"><i style="width:${(frac*100).toFixed(1)}%"></i></div>
+      ${due}${quick}
     </article>`;
   }).join("");
-  return `${hero}<div class="duo">${minis}</div>${totalsCard(list)}`;
+  const known=list.filter(a=>a.perMonth!=null);
+  const month=known.reduce((s,a)=>s+a.perMonth,0), day=known.reduce((s,a)=>s+a.perDay,0);
+  const rech=list.reduce((s,a)=>s+a.rechargedThisMonth,0);
+  const totals=`<article class="card totals sum-totals">
+    <div class="sum-head"><span>${t("monthTotal")}</span><b class="num">${money(month)}</b><span class="num">${money(day)} ${t("perDayTotal")}</span></div>
+    ${known.map(a=>`<div class="li"><span>${t("monthOf",{m:meterName(a.key)})}</span><b class="num">${money(a.perMonth)}</b></div>`).join("")}
+    <div class="li"><span>${t("rechargedMonth")}</span><b class="num">${money(rech)}</b></div>
+  </article>`;
+  return `<div class="duo">${minis}</div>${totals}`;
 }
 
 function renderSettings(){
@@ -690,6 +727,8 @@ function renderSettings(){
 function render(){
   const list=["elec","water"].map(analyze);
   const lay=prefs.layout;
+  const hn=lay==="summary" ? headNext(list) : "";
+  $("#headNext").innerHTML=hn; $("#headNext").hidden=!hn;
   $("#meters").className="meters lay-"+lay;
   $("#meters").innerHTML = lay==="ring" ? list.map(ringCard).join("")+totalsCard(list)
     : lay==="summary" ? summaryView(list)
@@ -865,6 +904,30 @@ bindSeg("#swatches",v=>setPref("palette",v));
 const dlg=$("#settingsDlg");
 $("#gearBtn").addEventListener("click",()=>{ if(dlg.showModal) dlg.showModal(); else dlg.setAttribute("open",""); });
 $("#closeSettings").addEventListener("click",()=>dlg.close ? dlg.close() : dlg.removeAttribute("open"));
+
+const detailDlg=$("#detailDlg");
+$("#closeDetail").addEventListener("click",()=>detailDlg.close ? detailDlg.close() : detailDlg.removeAttribute("open"));
+function openDetail(k){
+  $("#detailTitle").textContent=meterName(k);
+  $("#detailBody").innerHTML=meterCard(analyze(k));
+  if(detailDlg.showModal) detailDlg.showModal(); else detailDlg.setAttribute("open","");
+}
+function quickEntry(m,kind){
+  sel.meter=m; sel.kind=kind;
+  $("#segMeter").querySelectorAll("[data-v]").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===m)));
+  $("#segKind").querySelectorAll("[data-v]").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===kind)));
+  render();
+  $("#entryForm").scrollIntoView({behavior:"smooth",block:"center"});
+  setTimeout(()=>$("#fVal").focus({preventScroll:true}),350);
+}
+$("#meters").addEventListener("click",e=>{
+  const q=e.target.closest("[data-quick]");
+  if(q){ quickEntry(q.dataset.m,q.dataset.quick); return; }
+  const d=e.target.closest("[data-detail]"); if(d) openDetail(d.dataset.detail);
+});
+$("#meters").addEventListener("keydown",e=>{
+  if((e.key==="Enter"||e.key===" ") && e.target.matches("[data-detail]")){ e.preventDefault(); openDetail(e.target.dataset.detail); }
+});
 dlg.addEventListener("click",e=>{ if(e.target===dlg) dlg.close(); }); // tap outside the sheet closes it
 
 $("#clearDemo").addEventListener("click",()=>{ leaveDemo(); render(); persist(); });
