@@ -22,7 +22,7 @@ try{
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: one column dashboard — alerts, a card per meter (electricity / water), then the entry form and history.
-   Settings (language, theme, meters, sync, backup) live in a dialog behind the gear button. */
+   Settings (language, theme, meters, GitHub sync, backup) live in a dialog behind the gear button. */
 :root{
   --bg:#f3f5f6; --surface:#ffffff; --fg:#17232b; --muted:#4e5d66; --line:#dde3e6; --accent:#0a7a93; --on-accent:#ffffff;
   --elec:#c27a00; --elec-soft:#fbf0db; --water:#0a7a93; --water-soft:#dcf1f5;
@@ -344,13 +344,29 @@ header{flex-wrap:wrap}
 
     <section>
       <h3 data-i18n="syncTitle"></h3>
-      <p class="hint" data-i18n="syncHint"></p>
-      <div class="tools">
-        <input id="syncUrl" dir="ltr" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1 1 260px">
-        <button type="button" id="syncSave" data-i18n="syncLink"></button>
-        <button type="button" class="ghost" id="syncNow" data-i18n="syncNow"></button>
-      </div>
       <p class="hint" id="syncState"></p>
+      <div id="syncOff">
+        <ol class="hint" style="margin:0;padding-inline-start:20px;display:grid;gap:4px">
+          <li data-i18n="syncStep1"></li>
+          <li data-i18n="syncStep2"></li>
+          <li data-i18n="syncStep3"></li>
+        </ol>
+        <form id="syncForm" novalidate style="display:grid;gap:10px;margin-top:10px">
+          <label for="syncRepo"><span data-i18n="repoLabel"></span>
+            <input id="syncRepo" dir="ltr" placeholder="elkady591/porto-golf-data" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </label>
+          <label for="syncTok"><span data-i18n="tokenLabel"></span>
+            <input id="syncTok" type="password" dir="ltr" placeholder="github_pat_…" autocomplete="off">
+          </label>
+          <p class="hint" data-i18n="tokenHint"></p>
+          <p class="hint" id="syncErr" style="color:var(--bad)" hidden></p>
+          <div class="tools"><button type="submit" id="syncGo" data-i18n="syncLink"></button></div>
+        </form>
+      </div>
+      <div class="tools" id="syncOn" hidden>
+        <button type="button" class="ghost" id="syncNow" data-i18n="syncNow"></button>
+        <button type="button" class="ghost" id="syncStop" data-i18n="syncStop" style="color:var(--bad)"></button>
+      </div>
     </section>
 
     <section>
@@ -414,11 +430,21 @@ const STR = {
     appearance:"المظهر", modeAuto:"تلقائي", modeLight:"فاتح", modeDark:"غامق",
     palSea:"بحر", palGolf:"جولف", palSand:"رملي", palGraphite:"رصاصي",
     meters:"التنبيه قبل ما الرصيد يخلص", alertDays:"نبّهني قبلها بكام يوم",
-    syncTitle:"المزامنة مع Google Sheets",
-    syncHint:"بعد ما تعمل الشيت وسكريبت المزامنة، الصق اللينك هنا. البيانات هتتحفظ في الشيت وتظهر على أي موبايل عليه نفس اللينك.",
-    syncLink:"اربط", syncNow:"زامن دلوقتي", syncing:"جاري المزامنة…", syncLast:"آخر مزامنة: {t}",
-    syncFail:"المزامنة ما نجحتش. اتأكد من النت ومن لينك السكريبت. البيانات محفوظة على الموبايل وهتتزامن بعدين.",
-    syncBadUrl:"اللينك لازم يكون لينك الـ Web app من Apps Script وبيخلص بـ /exec", syncOff:"المزامنة متوقفة.",
+    syncTitle:"المزامنة مع GitHub",
+    syncOffNote:"اربط البرنامج بريبو خاص بيك على GitHub، وبياناتك هتتحفظ فيه لوحدها بعد كل تعديل، وتفتحها من أي موبايل.",
+    syncStep1:"اعمل ريبو جديد على GitHub وخليه Private، مثلاً باسم porto-golf-data.",
+    syncStep2:"من Settings ← Developer settings ← Fine-grained tokens اعمل توكن للريبو ده بس، بصلاحية Contents: Read and write.",
+    syncStep3:"اكتب اسم الريبو والصق التوكن هنا. على أي موبايل تاني اعمل نفس الخطوة دي بنفس التوكن.",
+    repoLabel:"الريبو", tokenLabel:"التوكن", tokenHint:"التوكن بيتحفظ على الموبايل ده بس، ومش بيتحط في النسخة الاحتياطية.",
+    syncLink:"اربط وزامن", syncNow:"زامن دلوقتي", syncStop:"افصل", syncStopSure:"متأكد؟ افصل",
+    syncing:"مربوط بـ {r}. جاري المزامنة…", syncLast:"مربوط بـ {r}. آخر مزامنة: {t}", syncNever:"مربوط بـ {r}. لسه ما اتزامنش.",
+    syncFail:"مربوط بـ {r}. {e} التعديلات محفوظة على الموبايل وهتترفع لما المشكلة تتحل.",
+    syncBadRepo:"اكتب الريبو بالشكل ده: اسمك/اسم-الريبو", syncNoTok:"الصق التوكن.",
+    syncPublic:"الريبو ده Public، يعني بياناتك هتبقى ظاهرة لأي حد. خليه Private الأول.",
+    syncReadOnly:"التوكن ده للقراءة بس. محتاج صلاحية Contents: Read and write.",
+    syncBadTok:"التوكن غلط أو انتهى.", syncNoRepo:"الريبو مش موجود، أو التوكن مالوش صلاحية عليه.",
+    syncNet:"تعذّر الاتصال بـ GitHub.", syncOffline:"مفيش نت.",
+    syncConnected:"اتربط بـ GitHub", syncStopped:"المزامنة اتفصلت، وبياناتك لسه على الموبايل.",
     notifTitle:"التنبيهات على الموبايل", notifEnable:"فعّل التنبيهات",
     notifUnsupported:"المتصفح ده مش بيدعم التنبيهات",
     notifOn:"التنبيهات شغالة. هتجيلك لما تفتح البرنامج، وكمان في الخلفية لو الموبايل بيدعم ده.",
@@ -464,11 +490,21 @@ const STR = {
     appearance:"Appearance", modeAuto:"Auto", modeLight:"Light", modeDark:"Dark",
     palSea:"Sea", palGolf:"Golf", palSand:"Sand", palGraphite:"Graphite",
     meters:"Low-balance alert", alertDays:"Days of warning",
-    syncTitle:"Google Sheets sync",
-    syncHint:"After you set up the sheet and the sync script, paste its link here. Your data is saved in the sheet and shows on every phone that uses the same link.",
-    syncLink:"Connect", syncNow:"Sync now", syncing:"Syncing…", syncLast:"Last synced: {t}",
-    syncFail:"Sync didn't work. Check your connection and the script link. Your data is saved on this phone and will sync later.",
-    syncBadUrl:"The link must be the Apps Script Web app link ending in /exec", syncOff:"Sync is off.",
+    syncTitle:"GitHub sync",
+    syncOffNote:"Connect the app to a private repo of yours on GitHub. Your data is saved there after every change, and you can open it on any phone.",
+    syncStep1:"Create a new GitHub repo and make it Private, e.g. porto-golf-data.",
+    syncStep2:"In Settings → Developer settings → Fine-grained tokens, create a token for that repo only, with Contents: Read and write.",
+    syncStep3:"Enter the repo name and paste the token here. On another phone, do the same with the same token.",
+    repoLabel:"Repo", tokenLabel:"Token", tokenHint:"The token is saved on this phone only and is never included in backups.",
+    syncLink:"Connect and sync", syncNow:"Sync now", syncStop:"Disconnect", syncStopSure:"Sure? Disconnect",
+    syncing:"Connected to {r}. Syncing…", syncLast:"Connected to {r}. Last synced: {t}", syncNever:"Connected to {r}. Not synced yet.",
+    syncFail:"Connected to {r}. {e} Your changes are saved on this phone and will upload once that's fixed.",
+    syncBadRepo:"Write the repo as: username/repo-name", syncNoTok:"Paste the token.",
+    syncPublic:"This repo is Public, so anyone could see your data. Make it Private first.",
+    syncReadOnly:"This token is read-only. It needs Contents: Read and write.",
+    syncBadTok:"The token is wrong or has expired.", syncNoRepo:"The repo doesn't exist, or the token has no access to it.",
+    syncNet:"Couldn't reach GitHub.", syncOffline:"No internet.",
+    syncConnected:"Connected to GitHub", syncStopped:"Sync is off. Your data is still on this phone.",
     notifTitle:"Phone notifications", notifEnable:"Turn on notifications",
     notifUnsupported:"This browser doesn't support notifications",
     notifOn:"Notifications are on. You'll get them when you open the app, and in the background if your phone supports it.",
@@ -808,6 +844,7 @@ function persist(){
   if(demo) return;
   try{localStorage.setItem(KEY,JSON.stringify(state));setSave("saved");}catch(e){setSave("cantSave");}
   shareWithWorker();
+  if(gh){ gh.dirty=true; ghSave(); }
   scheduleSync();
 }
 // The service worker can't read localStorage, so hand it the predicted dates (and the texts in the chosen language) through the Cache API.
@@ -840,41 +877,65 @@ function loadDemo(){
 }
 function leaveDemo(){ const keep=state.meters; state=blank(); state.meters=keep; demo=false; }
 
-/* ---------- Google Sheets sync (Apps Script web app) ---------- */
-let syncTimer=null, syncing=false, syncAgain=false, syncMsg={k:"",v:{}};
-function setSync(k,v={}){ syncMsg={k,v}; $("#syncState").textContent = k ? t(k,v) : ""; }
-function syncBase(){ try{ return (localStorage.getItem(KEY+"-sync")||"").trim(); }catch(e){ return ""; } }
+/* ---------- GitHub sync: the whole dataset as one JSON file in the user's own private repo (same as Petrol) ---------- */
+const GH_KEY=KEY+"-gh", GH_TOK=KEY+"-ghtoken", GH_FILE="porto-golf-data.json";
+let gh=null, syncTimer=null, syncing=false, syncErr="";
+try{ gh=JSON.parse(localStorage.getItem(GH_KEY)||"null"); }catch(e){}
+const ghTok=()=>{ try{ return localStorage.getItem(GH_TOK)||""; }catch(e){ return ""; } };
+const syncOn=()=>!!(gh&&gh.repo&&ghTok());
+function ghSave(){ try{ gh ? localStorage.setItem(GH_KEY,JSON.stringify(gh)) : localStorage.removeItem(GH_KEY); }catch(e){} }
+function b64e(s){const b=new TextEncoder().encode(s);let o="";for(let i=0;i<b.length;i+=0x8000)o+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(o);}
+function b64d(c){const s=atob(c.replace(/\s/g,""));return new TextDecoder().decode(Uint8Array.from(s,ch=>ch.charCodeAt(0)));}
+const ghApi=(path,opt={})=>fetch("https://api.github.com/repos/"+gh.repo+path,{cache:"no-store",...opt,headers:{Authorization:"Bearer "+ghTok(),Accept:"application/vnd.github+json"}});
+const syncDoc=()=>({app:"porto-golf",v:1,updated:new Date().toISOString(),entries:state.entries,settings:{u:state.settingsU,meters:state.meters}});
+// Two phones can both have changes: keep every record, the newest edit of each one wins (deletions are kept as del=1).
 function mergeById(a,b){
   const map=new Map();
   for(const r of [...a,...b]){ const cur=map.get(r.id); if(!cur || (+r.u||0)>(+cur.u||0)) map.set(r.id,r); }
   return [...map.values()];
 }
-function scheduleSync(){ if(!syncBase()) return; clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,1500); }
+function mergeIn(doc){
+  state.entries=mergeById(state.entries, normalize({entries:doc.entries}).entries);
+  const s=doc.settings;
+  if(s && +s.u>state.settingsU){ state.meters=normalize({meters:s.meters}).meters; state.settingsU=+s.u; renderSettings(); }
+}
+function scheduleSync(ms=2500){ if(!syncOn()) return; clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,ms); }
 async function syncNow(){
-  const base=syncBase(); if(!base || demo) return;
-  if(syncing){ syncAgain=true; return; }
-  syncing=true; setSync("syncing");
+  if(!syncOn() || demo || syncing) return;
+  if(!navigator.onLine){ syncErr=t("syncOffline"); renderSync(); return; }
+  syncing=true; renderSync(); let retry=60000;
   try{
-    const payload={action:"sync", entries:state.entries, kv:[{id:"settings",u:state.settingsU,data:{meters:state.meters}}]};
-    // text/plain keeps this a "simple" request, which Apps Script accepts without a CORS preflight.
-    const r=await fetch(base,{method:"POST",body:JSON.stringify(payload),headers:{"Content-Type":"text/plain;charset=utf-8"},redirect:"follow"});
-    const j=await r.json();
-    if(!j||!j.ok) throw new Error(j&&j.error||"bad reply");
-    state.entries=mergeById(state.entries, normalize({entries:j.entries}).entries);
-    for(const kv of j.kv||[]){
-      if(kv.id==="settings" && +kv.u>state.settingsU){ const n=normalize(kv.data); state.meters=n.meters; state.settingsU=+kv.u; renderSettings(); }
+    const r=await ghApi("/contents/"+GH_FILE); let sha=null, changed=false;
+    if(r.status===200){ const j=await r.json(); sha=j.sha;
+      if(sha!==gh.sha){ mergeIn(JSON.parse(b64d(j.content))); gh.sha=sha; changed=true; } }
+    else if(r.status!==404) throw r.status;
+    if(gh.dirty || changed || !sha){
+      const p=await ghApi("/contents/"+GH_FILE,{method:"PUT",body:JSON.stringify({message:"Porto Golf sync",content:b64e(JSON.stringify(syncDoc())),...(sha?{sha}:{})})});
+      if(!p.ok) throw p.status;
+      gh.sha=(await p.json()).content.sha; gh.dirty=false; retry=2500;
     }
-    try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}
-    setSync("syncLast",{t:fmtDT(Date.now())});
+    gh.last=Date.now(); syncErr="";
+    try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){}
     setSave("savedSynced");
-    shareWithWorker();
-    notifyIfDue(render());
+    if(changed){ shareWithWorker(); notifyIfDue(render()); }
   }catch(e){
-    setSync("syncFail");
+    // 409/422: another phone just pushed, so pull again shortly
+    if(e===409||e===422){ retry=1500; syncErr=""; }
+    else syncErr = e===401||e===403 ? t("syncBadTok") : e===404 ? t("syncNoRepo") : t("syncNet");
+    if(gh) gh.dirty=true;
   }finally{
-    syncing=false;
-    if(syncAgain){ syncAgain=false; scheduleSync(); }
+    syncing=false; ghSave(); renderSync();
+    if(gh && gh.dirty) scheduleSync(retry);
   }
+}
+function renderSync(){
+  const on=syncOn();
+  $("#syncOff").hidden=on; $("#syncOn").hidden=!on;
+  const r=on?gh.repo:"";
+  $("#syncState").textContent = !on ? t("syncOffNote")
+    : syncing ? t("syncing",{r})
+    : syncErr ? t("syncFail",{r,e:syncErr})
+    : gh.last ? t("syncLast",{r,t:fmtDT(gh.last)}) : t("syncNever",{r});
 }
 
 /* ---------- notifications ---------- */
@@ -929,15 +990,15 @@ function init(){
   applyPrefs();
   resetWhen();
   try{ const raw=localStorage.getItem(KEY); if(raw) state=normalize(JSON.parse(raw)); }catch(e){}
-  $("#syncUrl").value=syncBase();
-  if(!live(state.entries).length && !syncBase()) loadDemo();
+  if(!live(state.entries).length && !syncOn()) loadDemo();
   setSave(demo ? "" : "saved");
   renderSettings();
   const list=render();
+  renderSync();
   notifRefresh();
   shareWithWorker();
   notifyIfDue(list);
-  if(syncBase()) syncNow();
+  if(syncOn()) syncNow();
 }
 
 /* ---------- events ---------- */
@@ -950,7 +1011,7 @@ function bindSeg(id,fn){
 const pressOnly=(id,b)=>$(id).querySelectorAll("[data-v]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
 bindSeg("#segMeter",(v,b)=>{ sel.meter=v; pressOnly("#segMeter",b); render(); });
 bindSeg("#segKind",(v,b)=>{ sel.kind=v; pressOnly("#segKind",b); render(); });
-bindSeg("#segLang",v=>{ setPref("lang",v); if(syncMsg.k) setSync(syncMsg.k,syncMsg.v); });
+bindSeg("#segLang",v=>{ setPref("lang",v); renderSync(); });
 bindSeg("#segMode",v=>setPref("mode",v));
 bindSeg("#segLayout",v=>setPref("layout",v));
 bindSeg("#swatches",v=>setPref("palette",v));
@@ -1042,16 +1103,42 @@ $("#settings").addEventListener("change",e=>{
   renderSettings(); render(); persist();
 });
 
-$("#syncSave").addEventListener("click",()=>{
-  const v=$("#syncUrl").value.trim();
-  if(v && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(v)){ setSync("syncBadUrl"); return; }
-  try{ localStorage.setItem(KEY+"-sync",v); }catch(e){}
-  if(!v){ setSync("syncOff"); return; }
+$("#syncForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const err=$("#syncErr"), go=$("#syncGo");
+  const fail=k=>{ err.textContent=t(k); err.hidden=false; go.disabled=false; };
+  err.hidden=true;
+  const repo=$("#syncRepo").value.trim().replace(/^https?:\/\/github\.com\//,"").replace(/\.git$/,"").replace(/\/$/,"");
+  const token=$("#syncTok").value.trim();
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)) return fail("syncBadRepo");
+  if(!token) return fail("syncNoTok");
+  const old=gh, oldTok=ghTok();
+  const undo=()=>{ gh=old; ghSave(); try{ oldTok ? localStorage.setItem(GH_TOK,oldTok) : localStorage.removeItem(GH_TOK); }catch(e){} };
+  go.disabled=true;
+  gh={repo,sha:null,dirty:true,last:null};
+  try{ localStorage.setItem(GH_TOK,token); }catch(e){}
+  try{
+    const r=await ghApi(""); if(!r.ok) throw r.status;
+    const j=await r.json();
+    if(!j.private){ undo(); return fail("syncPublic"); }
+    if(j.permissions && !j.permissions.push){ undo(); return fail("syncReadOnly"); }
+  }catch(s){ undo(); return fail(s===401?"syncBadTok":s===404?"syncNoRepo":"syncNet"); }
   if(demo){ leaveDemo(); render(); }
-  syncNow();
+  await syncNow();
+  if(syncErr){ const m=syncErr; undo(); syncErr=""; renderSync(); err.textContent=m; err.hidden=false; go.disabled=false; return; }
+  $("#syncTok").value=""; go.disabled=false; renderSync(); render();
 });
 $("#syncNow").addEventListener("click",syncNow);
-document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ if($("#fWhen").value===whenDefault) resetWhen(); render(); if(syncBase()) syncNow(); } });
+$("#syncStop").addEventListener("click",()=>{
+  const b=$("#syncStop");
+  if(b.dataset.sure!=="1"){ b.dataset.sure="1"; b.textContent=t("syncStopSure"); setTimeout(()=>{ b.dataset.sure=""; b.textContent=t("syncStop"); },3000); return; }
+  b.dataset.sure=""; b.textContent=t("syncStop");
+  try{ localStorage.removeItem(GH_TOK); }catch(e){}
+  gh=null; ghSave(); syncErr=""; renderSync();
+  $("#syncState").textContent=t("syncStopped");
+});
+addEventListener("online",()=>syncNow());
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ if($("#fWhen").value===whenDefault) resetWhen(); render(); if(syncOn()) syncNow(); } });
 
 $("#notifBtn").addEventListener("click",async()=>{
   try{ await Notification.requestPermission(); }catch(e){}
