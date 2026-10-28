@@ -55,9 +55,6 @@ try{
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.65;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 [hidden]{display:none!important}
 .wrap{max-width:980px;margin:0 auto;padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:20px}
-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.head-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-[dir="rtl"] .head-side{align-items:flex-start}
 h1{font-family:var(--display);font-weight:700;font-size:30px;margin:0;line-height:1.25}
 h2{font-family:var(--display);font-weight:700;font-size:20px;margin:0;text-wrap:balance}
 h3{font-size:17px;margin:0;font-weight:700}
@@ -212,9 +209,14 @@ fieldset{border-radius:16px}
 .month-rech span{font-weight:500;font-size:14px} .month-rech b{font-size:17px} .month-rech small{font-size:13px;opacity:.85}
 .month-rech.none{background:var(--bg);color:var(--muted);font-size:14px}
 
-/* Summary layout */
-header{flex-wrap:wrap}
-.head-next{order:3;flex-basis:100%;display:grid;gap:2px;background:rgba(255,255,255,.14);border-radius:18px;padding:14px 16px}
+/* Header: title + gear on one row, next-recharge box full width below */
+header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 12px;align-items:start}
+.head-title{grid-column:1;grid-row:1;display:grid;gap:2px;min-width:0}
+.head-side{grid-column:2;grid-row:1;display:block}
+.head-title .save{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-top:4px}
+.head-title .save:not(:empty)::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.9}
+header:has(#headNext:not([hidden])) .sub{display:none}
+.head-next{grid-column:1/-1;display:grid;gap:2px;background:rgba(255,255,255,.14);border-radius:18px;padding:14px 16px}
 .head-next>span{opacity:.85;font-size:14px}
 .head-next>b{font-size:21px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .glyph-s{display:inline-grid}
@@ -239,16 +241,16 @@ header{flex-wrap:wrap}
 <body>
 <div class="wrap">
   <header>
-    <div>
+    <div class="head-title">
       <h1>Porto Golf</h1>
       <p class="sub" data-i18n="sub"></p>
+      <span class="save" id="saveState"></span>
     </div>
     <div class="head-next" id="headNext" hidden></div>
     <div class="head-side">
       <button type="button" class="gear" id="gearBtn" data-i18n-aria="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
-      <span class="save" id="saveState"></span>
     </div>
   </header>
 
