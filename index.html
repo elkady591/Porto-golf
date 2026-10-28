@@ -70,6 +70,7 @@ h3{font-size:17px;margin:0;font-weight:700}
 .alert.warn{background:var(--warn-soft);color:var(--warn)}
 .alert.bad{background:var(--bad-soft);color:var(--bad)}
 .alert.ok{background:var(--ok-soft);color:var(--ok)}
+.alert.remind{background:var(--water-soft);color:var(--water)}
 .alert .dot{width:10px;height:10px;border-radius:50%;background:currentColor;margin-top:8px;flex:none}
 .meters{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;min-width:0}
@@ -401,6 +402,7 @@ const STR = {
     remaining:"{u} متبقي تقريباً",
     perDay:"في اليوم", perMonth:"في الشهر", lasts:"يكفي لمدة", emptyOn:"هيخلص يوم",
     rechargeBy:"اشحن قبل", rechargedMonth:"شحن الشهر",
+    remindRead:"بقالك {d} من غير ما تسجّل قراءة لعداد {m}. سجّلها النهارده.", remindLearning:"في الأول سجّل قراءة كل ٣ أيام علشان التوقع يبقى أدق.",
     nDays:"{n} يوم", lessDay:"أقل من يوم", overYears:"أكتر من سنتين", noUse:"مفيش استهلاك", today:"النهارده",
     rateHint:"المعدل {r} {u} في اليوم، محسوب من آخر {w} يوم. آخر قراءة {t}.",
     alertBad:"رصيد {m} قرب يخلص ({d}). اشحن النهارده.",
@@ -450,6 +452,7 @@ const STR = {
     remaining:"{u} left (approx.)",
     perDay:"Per day", perMonth:"Per month", lasts:"Lasts", emptyOn:"Runs out on",
     rechargeBy:"Recharge by", rechargedMonth:"Recharged this month",
+    remindRead:"No {m} reading for {d}. Add one today.", remindLearning:"For the first few weeks, a reading every 3 days makes the forecast more accurate.",
     nDays:"{n} days", lessDay:"Less than a day", overYears:"Over 2 years", noUse:"No usage", today:"Today",
     rateHint:"Rate {r} {u}/day, from the last {w} days. Last reading {t}.",
     alertBad:"{m} balance is almost out ({d}). Recharge today.",
@@ -562,6 +565,14 @@ function analyze(key){
   }
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
   out.rechargedThisMonth = rechs.filter(r=>r.t>=monthStart.getTime()).reduce((s,r)=>s+r.v,0);
+  // Reading reminder: every 3 days while the app is still learning (under 6 readings or 3 weeks), then weekly.
+  if(reads.length){
+    const learning = reads.length<6 || now-reads[0].t < 21*DAY;
+    out.readEvery = learning ? 3 : 7;
+    out.readDueAt = out.lastReading.t + out.readEvery*DAY;
+    out.readDue = now >= out.readDueAt;
+    out.sinceRead = Math.floor((now-out.lastReading.t)/DAY);
+  }
   if(out.balance==null || out.rate==null) out.status="none";
   else if(out.balance<=0 || out.daysLeft<=1) out.status="bad";
   else if(out.daysLeft<=cfg.alertDays) out.status="warn";
@@ -610,6 +621,8 @@ function renderAlerts(list){
     if(a.status==="bad") items.push(`<div class="alert bad"><span class="dot"></span><span>${t("alertBad",{m:n,d:daysText(a.daysLeft)})}</span></div>`);
     else if(a.status==="warn") items.push(`<div class="alert warn"><span class="dot"></span><span>${t("alertWarn",{m:n,n:fmt(a.daysLeft,0),date:fmtDate(a.emptyAt)})}</span></div>`);
   }
+  for(const a of list) if(a.readDue)
+    items.push(`<div class="alert remind"><span class="dot"></span><span>${t("remindRead",{m:meterName(a.key),d:daysText(a.sinceRead)})}${a.readEvery===3?" "+t("remindLearning"):""}</span></div>`);
   if(!items.length && list.every(a=>a.status==="ok") && prefs.layout!=="summary"){
     const rb=list.map(a=>a.rechargeBy).filter(Boolean);
     items.push(`<div class="alert ok"><span class="dot"></span><span>${t("alertOk")}${rb.length?t("alertNext",{date:fmtDate(Math.min(...rb))}):""}</span></div>`);
@@ -800,9 +813,11 @@ function persist(){
 // The service worker can't read localStorage, so hand it the predicted dates (and the texts in the chosen language) through the Cache API.
 function shareWithWorker(){
   if(!("caches" in window) || demo) return;
-  const due=["elec","water"].map(analyze).filter(a=>a.rechargeBy).map(a=>({key:a.key,label:meterName(a.key),rechargeBy:a.rechargeBy,emptyAt:a.emptyAt}));
-  const payload={due,saved:Date.now(),lang:prefs.lang,dir:prefs.lang==="en"?"ltr":"rtl",
-    text:{bad:L().notifBad, soon:prefs.lang==="en"?"About {n} days left on {m}. Recharge soon.":"فاضل حوالي {n} يوم في رصيد {m}. اشحن قريب."}};
+  const list=["elec","water"].map(analyze);
+  const due=list.filter(a=>a.rechargeBy).map(a=>({key:a.key,label:meterName(a.key),rechargeBy:a.rechargeBy,emptyAt:a.emptyAt}));
+  const remind=list.filter(a=>a.readDueAt).map(a=>({key:a.key,label:meterName(a.key),dueAt:a.readDueAt,lastRead:a.lastReading.t}));
+  const payload={due,remind,saved:Date.now(),lang:prefs.lang,dir:prefs.lang==="en"?"ltr":"rtl",
+    text:{remind:L().remindRead, days:L().nDays, bad:L().notifBad, soon:prefs.lang==="en"?"About {n} days left on {m}. Recharge soon.":"فاضل حوالي {n} يوم في رصيد {m}. اشحن قريب."}};
   caches.open("chalet-state").then(c=>c.put("state.json",new Response(JSON.stringify(payload),{headers:{"Content-Type":"application/json"}}))).catch(()=>{});
 }
 function normalize(d){
@@ -894,6 +909,16 @@ async function notifyIfDue(list){
       if(reg) await reg.showNotification("Porto Golf",opts);
       else new Notification("Porto Golf",opts);
       last[a.key]=today;
+    }catch(e){}
+  }
+  for(const a of list){
+    if(!a.readDue || last["read-"+a.key]===today) continue;
+    const opts={body:t("remindRead",{m:meterName(a.key),d:daysText(a.sinceRead)}),icon:"icon-192.png",badge:"icon-192.png",
+      tag:"chalet-read-"+a.key,lang:prefs.lang,dir:prefs.lang==="en"?"ltr":"rtl"};
+    try{
+      if(reg) await reg.showNotification("Porto Golf",opts);
+      else new Notification("Porto Golf",opts);
+      last["read-"+a.key]=today;
     }catch(e){}
   }
   try{ localStorage.setItem(KEY+"-notified",JSON.stringify(last)); }catch(e){}

@@ -1,5 +1,5 @@
 // Offline shell + background reminder check for Porto Golf.
-const SHELL = "chalet-shell-v21";
+const SHELL = "chalet-shell-v22";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -39,7 +39,7 @@ async function checkDue() {
   const c = await caches.open("chalet-state");
   const r = await c.match("state.json");
   if (!r) return;
-  const { due = [], lang = "ar", dir = "rtl", text = {} } = await r.json();
+  const { due = [], remind = [], lang = "ar", dir = "rtl", text = {} } = await r.json();
   const bad = text.bad || "رصيد {m} قرب يخلص. اشحن النهارده.";
   const soon = text.soon || "فاضل حوالي {n} يوم في رصيد {m}. اشحن قريب.";
   const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
@@ -50,6 +50,15 @@ async function checkDue() {
     const body = days <= 1 ? fill(bad, { m: m.label }) : fill(soon, { m: m.label, n: days });
     await self.registration.showNotification("Porto Golf", {
       body, icon: "icon-192.png", badge: "icon-192.png", tag: "chalet-" + m.key, lang, dir
+    });
+  }
+  // Reading reminders; the tag keeps it to one notification per meter.
+  const remindText = text.remind || "بقالك {d} من غير ما تسجّل قراءة لعداد {m}. سجّلها النهارده.";
+  for (const m of remind) {
+    if (now < m.dueAt) continue;
+    const d = fill(text.days || "{n} يوم", { n: Math.floor((now - m.lastRead) / 86400000) });
+    await self.registration.showNotification("Porto Golf", {
+      body: fill(remindText, { m: m.label, d }), icon: "icon-192.png", badge: "icon-192.png", tag: "chalet-read-" + m.key, lang, dir
     });
   }
 }
